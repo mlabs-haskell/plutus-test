@@ -22,7 +22,7 @@ module Plutarch.Context (
   B.script,
   B.withStakingCredential,
   B.withRefTxId,
-  B.withDatum,
+  B.withHashDatum,
   B.withInlineDatum,
   B.withReferenceScript,
   B.withValue,

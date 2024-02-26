@@ -37,7 +37,6 @@ common common-lang
 
   build-depends:
     , base      ^>=4.16
-    , plutarch
 
   default-extensions:
     BangPatterns
@@ -77,18 +76,12 @@ common common-tests
   import:        common-lang
   ghc-options:   -O2 -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-    , bytestring
-    , contravariant
-    , plutarch
     , plutarch-context-builder
-    , plutus-core
     , plutus-ledger-api
     , plutus-tx
     , prettyprinter
-    , QuickCheck
     , tasty
     , tasty-hunit
-    , tasty-quickcheck
 
 -- Libraries
 
@@ -110,12 +103,13 @@ library
     , acc
     , bytestring
     , contravariant
-    , mtl
+    , cryptonite
+    , memory
     , optics
-    , plutus-core
     , plutus-ledger-api
     , plutus-tx
     , prettyprinter
+    , serialise
 
   hs-source-dirs:  src
 

@@ -20,7 +20,7 @@ import Plutarch.Context (
   pubKey,
   runChecker,
   script,
-  withDatum,
+  withHashDatum,
   withMinting,
   withRefIndex,
   withRefTxId,
@@ -156,7 +156,7 @@ generalSample =
     , input $
         address (Address (PubKeyCredential $ PubKeyHash "aa") (Just $ StakingPtr 1 2 3))
           <> withValue (singleton "cc" "hello" 123)
-          <> withDatum (123 :: Integer)
+          <> withHashDatum (123 :: Integer)
           <> withRefTxId "eeff"
     , output $
         script "cccc"

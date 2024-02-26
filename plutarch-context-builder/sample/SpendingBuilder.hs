@@ -17,7 +17,7 @@ import Plutarch.Context (
   script,
   tryBuildSpending,
   unpack,
-  withDatum,
+  withHashDatum,
   withRef,
   withRefIndex,
   withRefTxId,
@@ -63,7 +63,7 @@ sample =
     , input $
         pubKey "eeee"
           <> withValue (singleton "cc" "hello" 123)
-          <> withDatum (123 :: Integer)
+          <> withHashDatum (123 :: Integer)
     , output $
         script "cccc"
           <> withValue (singleton "dd" "world" 123)

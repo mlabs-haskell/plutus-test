@@ -34,7 +34,7 @@ module Plutarch.Context.Base (
   withdrawal,
   withStakingCredential,
   withRefTxId,
-  withDatum,
+  withHashDatum,
   withInlineDatum,
   withReferenceScript,
   withValue,
@@ -80,7 +80,12 @@ module Plutarch.Context.Base (
 ) where
 
 import Acc (Acc, fromReverseList)
+import Codec.Serialise (serialise)
 import Control.Arrow (Arrow ((&&&)))
+import Crypto.Hash (hashWith)
+import Crypto.Hash.Algorithms (Blake2b_256 (Blake2b_256))
+import Data.ByteArray (convert)
+import Data.ByteString (ByteString, toStrict)
 import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
 import Data.List (nub, sort, sortBy, sortOn)
@@ -96,20 +101,17 @@ import Optics (
   set,
   view,
  )
-import Plutarch (S)
-import Plutarch.Api.V2 (datumHash)
-import Plutarch.Builtin (PIsData, pdata, pforgetData)
-import Plutarch.Lift (PUnsafeLiftDecl (PLifted), pconstant, plift)
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2 (
   Address (Address, addressCredential, addressStakingCredential),
+  BuiltinByteString,
   BuiltinData (BuiltinData),
   Credential (PubKeyCredential, ScriptCredential),
   CurrencySymbol,
   DCert,
   Data,
   Datum (Datum),
-  DatumHash,
+  DatumHash (DatumHash),
   Interval,
   OutputDatum (NoOutputDatum, OutputDatum, OutputDatumHash),
   POSIXTime,
@@ -118,6 +120,7 @@ import PlutusLedgerApi.V2 (
   ScriptHash,
   ScriptPurpose (Minting, Spending),
   StakingCredential,
+  ToData,
   TokenName,
   TxId (TxId),
   TxInInfo (TxInInfo),
@@ -142,6 +145,8 @@ import PlutusLedgerApi.V2 (
   adaSymbol,
   adaToken,
   always,
+  toBuiltin,
+  toData,
  )
 import PlutusTx.AssocMap (Map)
 import PlutusTx.AssocMap qualified as AssocMap
@@ -362,12 +367,12 @@ utxoToTxOut utxo =
 
  @since 2.0.0
 -}
-withDatum ::
-  forall (b :: Type) (p :: S -> Type).
-  (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-  b ->
+withHashDatum ::
+  forall (datum :: Type).
+  (ToData datum) =>
+  datum ->
   UTXO
-withDatum dat =
+withHashDatum dat =
   set #data (pure . ContextDatum . datafy $ dat) (mempty :: UTXO)
 
 {- | Specify in-line datum of a UTXO.
@@ -375,9 +380,9 @@ withDatum dat =
  @since 2.0.0
 -}
 withInlineDatum ::
-  forall (b :: Type) (p :: S -> Type).
-  (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-  b ->
+  forall (datum :: Type).
+  (ToData datum) =>
+  datum ->
   UTXO
 withInlineDatum dat =
   set #data (pure . InlineDatum . datafy $ dat) (mempty :: UTXO)
@@ -398,9 +403,9 @@ withReferenceScript sh =
  @since 2.3.0
 -}
 withRedeemer ::
-  forall (b :: Type) (p :: S -> Type).
-  (PUnsafeLiftDecl p, PLifted p ~ b, PIsData p) =>
-  b ->
+  forall (redeemer :: Type).
+  (ToData redeemer) =>
+  redeemer ->
   UTXO
 withRedeemer r =
   set #redeemer (pure . datafy $ r) (mempty :: UTXO)
@@ -682,12 +687,13 @@ instance Builder BaseBuilder where
   _bb = lens id $ const id
   pack = id
 
+-- TODO: Remove/Inline
 datafy ::
-  forall (a :: Type) (p :: S -> Type).
-  (PUnsafeLiftDecl p, PLifted p ~ a, PIsData p) =>
-  a ->
+  forall (d :: Type).
+  (ToData d) =>
+  d ->
   Data
-datafy x = plift (pforgetData (pdata (pconstant x)))
+datafy = toData
 
 {- | Adds signer to builder.
 
@@ -702,9 +708,9 @@ signedWith pkh = pack . set #signatures (pure pkh) $ (mempty :: BaseBuilder)
 
 -- | @since 2.3.0
 valueToMints ::
-  forall r (p :: S -> Type).
-  (PUnsafeLiftDecl p, PLifted p ~ r, PIsData p) =>
-  r ->
+  forall (redeemer :: Type).
+  (ToData redeemer) =>
+  redeemer ->
   Value ->
   [Mint]
 valueToMints r = fmap f . AssocMap.toList . getValue
@@ -727,11 +733,11 @@ mint = mintWith ()
  @since 2.3.0
 -}
 mintWith ::
-  forall (a :: Type) (r :: Type) (p :: S -> Type).
-  (PUnsafeLiftDecl p, PLifted p ~ r, PIsData p, Builder a) =>
-  r ->
+  forall (builder :: Type) (redeemer :: Type).
+  (ToData redeemer, Builder builder) =>
+  redeemer ->
   Value ->
-  a
+  builder
 mintWith r val =
   pack . set #mints (fromReverseList . valueToMints r $ val) $
     (mempty :: BaseBuilder)
@@ -741,13 +747,13 @@ mintWith r val =
  @since 2.3.0
 -}
 mintSingletonWith ::
-  forall (a :: Type) (r :: Type) (p :: S -> Type).
-  (PUnsafeLiftDecl p, PLifted p ~ r, PIsData p, Builder a) =>
-  r ->
+  forall (builder :: Type) (redeemer :: Type).
+  (ToData redeemer, Builder builder) =>
+  redeemer ->
   CurrencySymbol ->
   TokenName ->
   Integer ->
-  a
+  builder
 mintSingletonWith r cs tn q = mintWith r $ Value.singleton cs tn q
 
 {- | Append extra datum to @ScriptContex@.
@@ -755,19 +761,19 @@ mintSingletonWith r cs tn q = mintWith r $ Value.singleton cs tn q
  @since 2.0.0
 -}
 extraData ::
-  forall (a :: Type) (d :: Type) (p :: S -> Type).
-  (Builder a, PUnsafeLiftDecl p, PLifted p ~ d, PIsData p) =>
-  d ->
-  a
+  forall (builder :: Type) (datum :: Type).
+  (Builder builder, ToData datum) =>
+  datum ->
+  builder
 extraData x =
   pack . set #datums (pure . datafy $ x) $ (mempty :: BaseBuilder)
 
 extraRedeemer ::
-  forall (a :: Type) (r :: Type) (p :: S -> Type).
-  (Builder a, PUnsafeLiftDecl p, PLifted p ~ r, PIsData p) =>
+  forall (builder :: Type) (redeemer :: Type).
+  (Builder builder, ToData redeemer) =>
   ScriptPurpose ->
-  r ->
-  a
+  redeemer ->
+  builder
 extraRedeemer p r =
   pack
     . set #redeemers (pure (p, Redeemer . BuiltinData . datafy $ r))
@@ -1186,3 +1192,9 @@ mkNormalizedBase = over _bb go
         . over #outputs (fmap normalizeUTXO)
         . over #mints (fmap normalizeMint)
         . over #dcerts (fromList . nub . sort . toList)
+
+hashBlake2b_256 :: ByteString -> BuiltinByteString
+hashBlake2b_256 = toBuiltin . convert @_ @ByteString . hashWith Blake2b_256
+
+datumHash :: Datum -> DatumHash
+datumHash = DatumHash . hashBlake2b_256 . toStrict . serialise . toData
