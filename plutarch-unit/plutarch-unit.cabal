@@ -36,13 +36,6 @@ common common-lang
     -Wmissing-export-lists -Wmissing-deriving-strategies
     -Wno-partial-type-signatures
 
-  -- TODO, 2022-10-07: We should rely on LPE's pprelude,
-  -- but I'm not totally sure how to make this happen
-  -- in nix.
-  --  mixins:
-  --    base hiding (Prelude),
-  --    pprelude (PPrelude as Prelude)
-
   if !flag(development)
     ghc-options: -Werror
 
@@ -85,57 +78,17 @@ common common-lang
 
   default-language:   Haskell2010
 
-common common-tests
-  import:        common-lang
-  ghc-options:   -O2 -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-    , bytestring
-    , liqwid-plutarch-extra
-    , plutarch
-    , plutarch-unit
-    , plutus-core
-    , plutus-tx
-    , QuickCheck
-    , tasty
-    , tasty-hunit
-    , tasty-quickcheck
-
 library
   import:          common-lang
   exposed-modules:
-    Plutarch.Test.Export
-    Plutarch.Test.Precompiled
     Plutarch.Test.Script
-    Plutarch.Test.Unit
 
   other-modules:
   build-depends:
-    , acc
-    , containers
-    , liqwid-plutarch-extra
-    , liqwid-script-export
-    , mtl
     , optics-core
-    , optics-extra
     , optics-th
-    , plutus-core
-    , plutus-ledger-api
-    , plutus-tx
-    , ply-core
-    , pretty
-    , pretty-show
-    , selective
-    , semigroupoids
     , tagged
     , tasty
-    , tasty-hunit
     , text
-    , transformers
 
   hs-source-dirs:  src
-
-test-suite sample
-  import:         common-lang, common-tests
-  type:           exitcode-stdio-1.0
-  main-is:        Main.hs
-  hs-source-dirs: sample
