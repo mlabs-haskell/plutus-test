@@ -41,7 +41,6 @@ common common-lang
 
   build-depends:
     , base      ^>=4.16
-    , plutarch
 
   default-extensions:
     NoStarIsType
@@ -81,14 +80,17 @@ common common-lang
 library
   import:          common-lang
   exposed-modules:
-    Plutarch.Test.Script
+    Plutarch.Test.Program
 
   other-modules:
+    Plutarch.Test.Eval
+
   build-depends:
     , optics-core
     , optics-th
     , tagged
     , tasty
     , text
+    , plutus-core
 
   hs-source-dirs:  src

@@ -1,11 +1,10 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 {- | Tasty provider for testing 'ScriptCase'.
 
  @since 1.3
 -}
-module Plutarch.Test.Script (
+module Plutarch.Test.Program (
   -- * High level
   ScriptCase (..),
   ScriptResult (..),
@@ -25,6 +24,7 @@ import Data.Text (Text)
 import Data.Text qualified as T
 import Optics.Core (view)
 import Optics.TH (makeFieldLabelsNoPrefix)
+import Plutarch.Test.Eval (evalScript)
 import Test.Tasty.Providers (
   IsTest (
     run,
@@ -35,11 +35,10 @@ import Test.Tasty.Providers (
   testFailed,
   testPassed,
  )
+import UntypedPlutusCore qualified as UPLC
 
 --------------------------------------------------------------------------------
 
-import Plutarch.Evaluate (evalScript)
-import Plutarch.Script (Script)
 import Test.Tasty (testGroup)
 
 --------------------------------------------------------------------------------
@@ -70,11 +69,11 @@ data ScriptCase = ScriptCase
   -- ^ The expectation.
   --
   -- @since 1.3
-  , script :: Script
+  , script :: UPLC.Program UPLC.DeBruijn UPLC.DefaultUni UPLC.DefaultFun ()
   -- ^ The script.
   --
   -- @since 1.3
-  , debugScript :: Script
+  , debugScript :: UPLC.Program UPLC.DeBruijn UPLC.DefaultUni UPLC.DefaultFun ()
   -- ^ Debug version of the script for .
   --
   -- @since 1.3
@@ -137,9 +136,9 @@ runScriptCase sc =
 -}
 runScript ::
   -- | Script to run.
-  Script ->
+  UPLC.Program UPLC.DeBruijn UPLC.DefaultUni UPLC.DefaultFun () ->
   -- | Debug version of the script.
-  Script ->
+  UPLC.Program UPLC.DeBruijn UPLC.DefaultUni UPLC.DefaultFun () ->
   -- | Message to return upon success.
   String ->
   -- | Returns the result of evaluating the script, along with the parameter
