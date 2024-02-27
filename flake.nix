@@ -1,63 +1,86 @@
 {
-  description = "liqwid-libs: A monorepo for Liqwid Labs maintained libraries";
-
-  nixConfig = {
-    extra-experimental-features = [ "nix-command" "flakes" ];
-    extra-substituters = [ "https://cache.iog.io" "https://mlabs.cachix.org" ];
-    extra-trusted-public-keys = [ "hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" ];
-    allow-import-from-derivation = "true";
-    max-jobs = "auto";
-    auto-optimise-store = "true";
-  };
+  description = "plutus-test";
 
   inputs = {
-    nixpkgs.follows = "liqwid-nix/nixpkgs";
-    nixpkgs-latest.url = "github:NixOS/nixpkgs?rev=a2494bf2042d605ca1c4a679401bdc4971da54fb";
-
-    liqwid-nix = {
-      url = "github:liqwid-labs/liqwid-nix/v2.9.2";
-      inputs.nixpkgs-latest.follows = "nixpkgs-latest";
+    nixpkgs.url = "github:NixOS/nixpkgs";
+    flake-parts = {
+      url = "github:hercules-ci/flake-parts";
+      inputs.nixpkgs-lib.follows = "nixpkgs";
     };
-
-    ply.url = "github:liqwid-labs/ply?ref=seungheonoh/purs";
+    pre-commit-hooks-nix = {
+      url = "github:cachix/pre-commit-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs-stable.follows = "nixpkgs";
+    };
+    hci-effects = {
+      url = "github:hercules-ci/hercules-ci-effects";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-parts.follows = "flake-parts";
+    };
+    simpleHaskellNix = {
+      url = "github:mlabs-haskell/simple-haskell-nix";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        pre-commit-hooks-nix.follows = "pre-commit-hooks-nix";
+        hci-effects.follows = "hci-effects";
+      };
+    };
   };
 
-  outputs = inputs@{ self, flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [
-        inputs.liqwid-nix.flakeModule
-      ];
-      systems = [ "x86_64-linux" "aarch64-darwin" "x86_64-darwin" "aarch64-linux" ];
-      perSystem = { config, self', inputs', system, ... }:
-        let
-          pkgs = import inputs.nixpkgs-latest { inherit system; };
-        in
-        {
-          onchain.default = {
-            src = ./.;
-            ghc.version = "ghc925";
-            fourmolu.package = pkgs.haskell.packages.ghc924.fourmolu_0_9_0_0;
-            hlint = { };
-            cabalFmt = { };
-            hasktags = { };
-            applyRefact = { };
-            shell = { };
-            enableBuildChecks = true;
-            hoogleImage.enable = false;
-            extraHackageDeps = [
-              "${inputs.ply}/ply-core"
-              "${inputs.ply}/ply-plutarch"
-            ];
-          };
-          ci.required = [ "all_onchain" ];
+  outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } ({ self, ... }: {
+    imports = [
+      inputs.pre-commit-hooks-nix.flakeModule
+      inputs.hci-effects.flakeModule
+      inputs.simpleHaskellNix.flakeModules.simpleHaskellNix
+
+      ./.
+    ];
+
+    # `nix flake show --impure` hack
+    systems =
+      if builtins.hasAttr "currentSystem" builtins
+      then [ builtins.currentSystem ]
+      else inputs.nixpkgs.lib.systems.flakeExposed;
+
+    herculesCI.ciSystems = [ "x86_64-linux" ];
+
+    hercules-ci.flake-update = {
+      enable = true;
+      updateBranch = "hci/update-flake-lock";
+      createPullRequest = true;
+      autoMergeMethod = null;
+      when = {
+        minute = 45;
+        hour = 12;
+        dayOfWeek = "Sun";
+      };
+    };
+
+    perSystem =
+      { config
+        , self'
+      , pkgs
+      , lib
+      , system
+      , simpleHaskellNix
+      , ...
+      }: {
+        _module.args.pkgs = import self.inputs.nixpkgs {
+          inherit system;
+          config.allowBroken = true;
         };
 
-      flake.nixosModules.liqwid-script-export = { ... }: {
-        imports = [ ./liqwid-script-export/nixos-module.nix ];
+        pre-commit.settings = {
+          hooks = {
+            fourmolu.enable = true;
+            nixpkgs-fmt.enable = true;
+            typos.enable = true;
+          };
+        };
+
+        devShells = {
+          default = self'.devShells.plutusTest;
+        };
       };
-      flake.hydraJobs.x86_64-linux = (
-        self.checks.x86_64-linux
-        // self.packages.x86_64-linux
-      );
-    };
+  });
 }
