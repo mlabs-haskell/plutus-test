@@ -434,7 +434,7 @@ withRef :: TxOutRef -> UTXO
 withRef (TxOutRef tid idx) = withRefTxId tid <> withRefIndex idx
 
 {- | Specify the `Value` of a UTXO. This will be monoidally merged `Value`s
- when given mutiple times.
+ when given multiple times.
 
  @since 2.0.0
 -}
@@ -483,7 +483,7 @@ script (ScriptCredential -> cred) =
   set #credential (pure cred) (mempty :: UTXO)
 
 {- | Interface between specific builders to BaseBuilder.
- @pack@ will constrct specific builder that contains given BaseBuilder.
+ @pack@ will construct specific builder that contains given BaseBuilder.
 
  Laws:
  1. view _bb . pack = id
@@ -980,7 +980,7 @@ yieldExtraDatums (toList -> ds) =
   datumWithHash <$> ds
 
 {- | Provide list of TxInInfo and DatumHash-Datum pair for inputs to
- Continutation Monad.
+ Continuation Monad.
 
  @since 1.1.0
 -}
@@ -1003,7 +1003,7 @@ yieldInInfoDatums (toList -> inputs) =
     createDatumPairs = mapMaybe utxoDatumPair
 
 {- | Provide list of TxOut and DatumHash-Datum pair for outputs to
- Continutation Monad.
+ Continuation Monad.
 
  @since 1.1.0
 -}
@@ -1019,7 +1019,7 @@ yieldOutDatums (toList -> outputs) =
     createDatumPairs = mapMaybe utxoDatumPair
 
 {- | Provide script purpose - redeemer map for outputs to
- Continutation Monad.
+ Continuation Monad.
 
      @since 2.3.0
 -}
@@ -1049,7 +1049,7 @@ yieldRedeemerMap au am = scriptInputs <> mints
 {- | Automatically generate `TxOutRef`s from given builder.
  It tries to reserve index if given one; otherwise, it grants
  incremental indices to each inputs starting from one. If there
- are duplicate reserved indices, the second occurance will be
+ are duplicate reserved indices, the second occurrence will be
  treated as non-reserved and given incremental index.
 
  @since 2.1.0
@@ -1148,7 +1148,7 @@ normalizeValue (getValue -> val) =
           Nothing -> valWith0Ada -- No Ada token present, add the 0 entry
           Just adaAmount ->
             {- Ada symbol and token present, strip out ada symbol
-               entires (which may contain non-Ada tokens and/or duplicates),
+               entries (which may contain non-Ada tokens and/or duplicates),
                and add back in only the correct Ada asset class amount
             -}
             AssocMap.insert

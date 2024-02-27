@@ -81,7 +81,7 @@ main = do
     , testCase "normalizeValue adds 0 ADA entry if it is missing" $
         (getValue . normalizeValue . Value $ fromList [])
           @?= (getValue . Value $ fromList [zeroAdaTuple])
-    , testCase "normalizeValue adds matching entires" $
+    , testCase "normalizeValue adds matching entries" $
         ( getValue . normalizeValue . Value $
             fromList
               [ zeroAdaTuple
