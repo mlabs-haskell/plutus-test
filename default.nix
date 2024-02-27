@@ -19,9 +19,6 @@
     in
     {
       devShells.plutusTest = plutusTest.devShell;
-
-      packages = {
-        inherit (plutusTest) packages;
-      };
+      inherit (plutusTest) packages;
     };
 }
