@@ -24,6 +24,6 @@
           plutusTest.devShell
         ];
       };
-      inherit (plutusTest) packages;
+      inherit (plutusTest) packages checks;
     };
 }

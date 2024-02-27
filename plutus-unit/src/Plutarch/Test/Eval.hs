@@ -40,7 +40,7 @@ evalScript' ::
   , [Text]
   )
 evalScript' budget (Program _ _ t) = case evalTerm budget (UPLC.termMapNames UPLC.fakeNameDeBruijn t) of
-  (res, remaining, logs) -> (Program () (PLC.defaultVersion ()) . UPLC.termMapNames UPLC.unNameDeBruijn <$> res, remaining, logs)
+  (res, remaining, logs) -> (Program () PLC.plcVersion100 . UPLC.termMapNames UPLC.unNameDeBruijn <$> res, remaining, logs)
 
 evalTerm ::
   ExBudget ->
