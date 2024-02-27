@@ -11,6 +11,7 @@ import PlutusCore.Evaluation.Machine.ExBudget (
  )
 import PlutusCore.Evaluation.Machine.ExBudgetingDefaults (defaultCekParameters)
 import PlutusCore.Evaluation.Machine.ExMemory (ExCPU (ExCPU), ExMemory (ExMemory))
+import PlutusCore.Version (plcVersion100)
 import UntypedPlutusCore (
   Program (Program),
   Term,
@@ -40,7 +41,7 @@ evalScript' ::
   , [Text]
   )
 evalScript' budget (Program _ _ t) = case evalTerm budget (UPLC.termMapNames UPLC.fakeNameDeBruijn t) of
-  (res, remaining, logs) -> (Program () PLC.plcVersion100 . UPLC.termMapNames UPLC.unNameDeBruijn <$> res, remaining, logs)
+  (res, remaining, logs) -> (Program () plcVersion100 . UPLC.termMapNames UPLC.unNameDeBruijn <$> res, remaining, logs)
 
 evalTerm ::
   ExBudget ->

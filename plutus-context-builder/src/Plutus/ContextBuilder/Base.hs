@@ -496,7 +496,7 @@ class Builder a where
   pack :: BaseBuilder -> a
 
 -- | @since 2.1.0
-unpack :: Builder a => a -> BaseBuilder
+unpack :: (Builder a) => a -> BaseBuilder
 unpack = view _bb
 
 {- | Base builder. Handles basic input, output, signs, mints, and
@@ -1056,7 +1056,7 @@ yieldRedeemerMap au am = scriptInputs <> mints
 -}
 mkOutRefIndices ::
   forall (a :: Type).
-  Builder a =>
+  (Builder a) =>
   a ->
   a
 mkOutRefIndices = over _bb go
@@ -1082,7 +1082,7 @@ mkOutRefIndices = over _bb go
 -}
 combinePair ::
   forall (k :: Type) (v :: Type).
-  Eq k =>
+  (Eq k) =>
   (v -> v -> v) ->
   (k, v) ->
   [(k, v)] ->
@@ -1100,7 +1100,7 @@ combinePair c (k, v) ((k', v') : xs)
 -}
 combineMap ::
   forall (k :: Type) (v :: Type).
-  Eq k =>
+  (Eq k) =>
   (v -> v -> v) ->
   Map k v ->
   Map k v
@@ -1113,7 +1113,7 @@ combineMap c (AssocMap.toList -> m) =
 -}
 sortMap ::
   forall (k :: Type) (v :: Type).
-  Ord k =>
+  (Ord k) =>
   Map k v ->
   Map k v
 sortMap (AssocMap.toList -> m) =
@@ -1180,7 +1180,7 @@ normalizeValue (getValue -> val) =
 -}
 mkNormalizedBase ::
   forall (a :: Type).
-  Builder a =>
+  (Builder a) =>
   a ->
   a
 mkNormalizedBase = over _bb go
