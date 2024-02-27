@@ -1,4 +1,4 @@
-{- | Module: Plutarch.Context
+{- | Module: Plutus.Context
  Copyright: (C) Liqwid Labs 2022
  License: Proprietary
  Maintainer: Koz Ross <koz@mlabs.city>

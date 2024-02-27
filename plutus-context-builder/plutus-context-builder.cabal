@@ -5,9 +5,9 @@ synopsis:           A builder for ScriptContexts
 description:
   Defines a builder for ScriptContexts, with helpers for commonly-needed uses.
 
-homepage:           https://github.com/Liqwid-Labs/plutarch-context-builder
+homepage:           https://github.com/mlabs-haskell/plutus-test
 bug-reports:
-  https://github.com/Liqwid-Labs/plutarch-context-builder/issues
+  https://github.com/Liqwid-Labs/mlabs-haskell/plutus-test/issues
 
 license:
 
@@ -17,7 +17,7 @@ maintainer:
   Koz Ross <koz@mlabs.city>, Seungheon Oh <seungheon.ooh@gmail.com>
 
 copyright:          (C) 2022 Liqwid Labs
-category:           Plutarch
+category:           Plutus
 build-type:         Simple
 tested-with:        GHC ==9.2.5
 extra-source-files: README.md
@@ -25,7 +25,7 @@ extra-source-files: README.md
 -- LICENSE
 source-repository head
   type:     git
-  location: https://github.com/Liqwid-Labs/plutarch-context-builder
+  location: https://github.com/mlabs-haskell/plutus-test
 
 -- Common sections
 

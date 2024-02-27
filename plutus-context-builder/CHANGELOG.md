@@ -1,6 +1,14 @@
-# Revision history for `plutarch-context-builder`
+# Revision history for `plutus-context-builder`
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
+
+## 3.0.0 - 2024-02-26
+
+### Modified
+
+* Renamed `withDatum -> withHashDatum`
+* Changed signatures of functions that take data-encodable arguments to require `ToData` rather than Plutarch equivalents
+* Switched to `plutus-core` version 1.7.0.0 as the only one supported
 
 ## 2.11.0 -- 2023-01-06
 
