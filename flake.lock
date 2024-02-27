@@ -83,6 +83,23 @@
         "type": "github"
       }
     },
+    "cardanoPackages": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1708970955,
+        "narHash": "sha256-k6Y9WjDej7wCkUowVi/tdsWP6EWUMZTSRU9r+4lMJmU=",
+        "owner": "IntersectMBO",
+        "repo": "cardano-haskell-packages",
+        "rev": "f09964311e8894a5f09e258f308a9c3d4221f029",
+        "type": "github"
+      },
+      "original": {
+        "owner": "IntersectMBO",
+        "ref": "repo",
+        "repo": "cardano-haskell-packages",
+        "type": "github"
+      }
+    },
     "empty-flake": {
       "locked": {
         "lastModified": 1665652377,
@@ -134,27 +151,6 @@
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": [
-          "nixpkgs"
-        ]
-      },
-      "locked": {
-        "lastModified": 1706830856,
-        "narHash": "sha256-a0NYyp+h9hlb7ddVz4LUn1vT/PLwqfrWYcHMvFB1xYg=",
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "rev": "b253292d9c0a5ead9bc98c4e9a26c6312e27d69f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hercules-ci",
-        "repo": "flake-parts",
-        "type": "github"
-      }
-    },
-    "flake-parts_2": {
-      "inputs": {
-        "nixpkgs-lib": [
-          "simpleHaskellNix",
           "nixpkgs"
         ]
       },
@@ -717,6 +713,7 @@
     },
     "root": {
       "inputs": {
+        "cardanoPackages": "cardanoPackages",
         "flake-parts": "flake-parts",
         "hci-effects": "hci-effects",
         "nixpkgs": "nixpkgs",
@@ -727,7 +724,9 @@
     "simpleHaskellNix": {
       "inputs": {
         "empty-flake": "empty-flake",
-        "flake-parts": "flake-parts_2",
+        "flake-parts": [
+          "flake-parts"
+        ],
         "haskell-nix": "haskell-nix",
         "hci-effects": [
           "hci-effects"

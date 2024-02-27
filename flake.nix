@@ -19,11 +19,14 @@
     };
     simpleHaskellNix = {
       url = "github:mlabs-haskell/simple-haskell-nix";
-      inputs = {
-        nixpkgs.follows = "nixpkgs";
-        pre-commit-hooks-nix.follows = "pre-commit-hooks-nix";
-        hci-effects.follows = "hci-effects";
-      };
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.pre-commit-hooks-nix.follows = "pre-commit-hooks-nix";
+      inputs.hci-effects.follows = "hci-effects";
+      inputs.flake-parts.follows = "flake-parts";
+    };
+    cardanoPackages = {
+      url = "github:IntersectMBO/cardano-haskell-packages?ref=repo";
+      flake = false;
     };
   };
 
