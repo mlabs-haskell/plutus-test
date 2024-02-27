@@ -18,7 +18,12 @@
       };
     in
     {
-      devShells.plutusTest = plutusTest.devShell;
+      devShells.plutusTest = pkgs.mkShell {
+        shellHook = config.pre-commit.installationScript;
+        inputsFrom = [
+          plutusTest.devShell
+        ];
+      };
       inherit (plutusTest) packages;
     };
 }
