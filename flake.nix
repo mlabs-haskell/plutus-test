@@ -79,6 +79,8 @@
             nixpkgs-fmt.enable = true;
             typos.enable = true;
           };
+
+          settings.typos.ignored-words = [ "wheres" ];
         };
 
         devShells = {
