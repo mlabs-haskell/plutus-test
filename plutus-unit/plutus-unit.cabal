@@ -80,10 +80,8 @@ common common-lang
 library
   import:          common-lang
   exposed-modules:
-    Plutarch.Test.Program
-
-  other-modules:
     Plutarch.Test.Eval
+    Plutarch.Test.Program
 
   build-depends:
     , optics-core

@@ -1,4 +1,4 @@
-module Plutarch.Test.Eval (evalScript) where
+module Plutarch.Test.Eval (evalScript, evalTerm) where
 
 -- Adapted from Plutarch.Internal.Evaluate
 
