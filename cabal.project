@@ -16,7 +16,3 @@ tests: true
 
 -- Important! Without this, you will get very limited output from any tests.
 test-show-details: direct
-
-constraints:
-  , plutus-core == 1.7.0.0
-  , nothunks < 0.2

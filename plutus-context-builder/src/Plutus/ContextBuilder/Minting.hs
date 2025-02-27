@@ -71,8 +71,9 @@ import PlutusLedgerApi.V2 (
     txInfoWdrl
   ),
   Value,
-  fromList,
+  adaSymbol,
  )
+import PlutusTx.AssocMap qualified as AssocMap
 import Prettyprinter qualified as P (Pretty (pretty))
 
 {- | A context builder for Minting. Corresponds to
@@ -148,19 +149,19 @@ buildMinting' builder@(unpack -> bb) =
           { txInfoInputs = ins
           , txInfoReferenceInputs = refin
           , txInfoOutputs = outs
-          , txInfoData = fromList $ inDat <> outDat <> extraDat
+          , txInfoData = AssocMap.unsafeFromList $ inDat <> outDat <> extraDat
           , txInfoMint = mintedValue
-          , txInfoRedeemers = fromList $ toList (view #redeemers bb) <> redeemerMap
+          , txInfoRedeemers = AssocMap.unsafeFromList $ toList (view #redeemers bb) <> redeemerMap
           , txInfoSignatories = toList . view #signatures $ bb
-          , txInfoWdrl = fromList $ toList (view #withdrawals bb)
+          , txInfoWdrl = AssocMap.unsafeFromList $ toList (view #withdrawals bb)
           , txInfoDCert = toList (view #dcerts bb)
           }
       mintcs = case view #mintingCS builder of
         Just cs ->
           if hasCS mintedValue cs
             then Minting cs
-            else Minting ""
-        Nothing -> Minting ""
+            else Minting adaSymbol
+        Nothing -> Minting adaSymbol
    in ScriptContext txinfo mintcs
 
 {- | Check builder with provided checker, then build minting context.

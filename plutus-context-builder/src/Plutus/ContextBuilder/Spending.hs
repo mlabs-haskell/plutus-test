@@ -69,8 +69,8 @@ import PlutusLedgerApi.V2 (
     txInfoWdrl
   ),
   TxOutRef (..),
-  fromList,
  )
+import PlutusTx.AssocMap qualified as AssocMap
 import Prettyprinter qualified as P
 
 data ValidatorInputIdentifier
@@ -213,11 +213,11 @@ buildSpending' builder@(unpack -> bb) =
           { txInfoInputs = ins
           , txInfoReferenceInputs = refin
           , txInfoOutputs = outs
-          , txInfoData = fromList $ inDat <> outDat <> extraDat
+          , txInfoData = AssocMap.unsafeFromList $ inDat <> outDat <> extraDat
           , txInfoMint = mintedValue
           , txInfoSignatories = toList . view #signatures $ bb
-          , txInfoRedeemers = fromList $ toList (view #redeemers bb) <> redeemerMap
-          , txInfoWdrl = fromList $ toList (view #withdrawals bb)
+          , txInfoRedeemers = AssocMap.unsafeFromList $ toList (view #redeemers bb) <> redeemerMap
+          , txInfoWdrl = AssocMap.unsafeFromList $ toList (view #withdrawals bb)
           , txInfoDCert = toList (view #dcerts bb)
           }
       vInRef = case view #validatorInput builder >>= yieldValidatorInput ins of

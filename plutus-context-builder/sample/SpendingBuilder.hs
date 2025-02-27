@@ -27,8 +27,10 @@ import Plutus.ContextBuilder (
   withValue,
  )
 import PlutusLedgerApi.V2 (
+  CurrencySymbol (CurrencySymbol),
   ScriptContext (scriptContextPurpose),
   ScriptPurpose (Spending),
+  TokenName (TokenName),
   TxOutRef (..),
   singleton,
  )
@@ -42,31 +44,31 @@ someOutRef = TxOutRef "abcdee" 71
 sample :: SpendingBuilder
 sample =
   mconcat
-    [ mint $ singleton "aaaa" "hello" 333
+    [ mint $ singleton (CurrencySymbol "aaaa") (TokenName "hello") 333
     , input $
         pubKey "ffaacc"
-          <> withValue (singleton "cc" "hello" 123)
+          <> withValue (singleton (CurrencySymbol "cc") (TokenName "hello") 123)
           <> withRefIndex 19
     , input $
         pubKey "aaccdd"
-          <> withValue (singleton "cc" "hello" 123)
+          <> withValue (singleton (CurrencySymbol "cc") (TokenName "hello") 123)
           <> withRef someOutRef
     , input $
         pubKey "aabb"
-          <> withValue (singleton "cc" "hello" 123)
+          <> withValue (singleton (CurrencySymbol "cc") (TokenName "hello") 123)
           <> withRefIndex 1121
           <> withRefTxId "abababcc"
     , input $
         pubKey "eeffdd"
-          <> withValue (singleton "cc" "hello" 123)
+          <> withValue (singleton (CurrencySymbol "cc") (TokenName "hello") 123)
           <> withRefTxId "eeddaa"
     , input $
         pubKey "eeee"
-          <> withValue (singleton "cc" "hello" 123)
+          <> withValue (singleton (CurrencySymbol "cc") (TokenName "hello") 123)
           <> withHashDatum (123 :: Integer)
     , output $
         script "cccc"
-          <> withValue (singleton "dd" "world" 123)
+          <> withValue (singleton (CurrencySymbol "dd") (TokenName "world") 123)
     ]
 
 specs :: TestTree
@@ -119,7 +121,7 @@ specs =
               <> input
                 ( mconcat
                     [ script "aaaaa"
-                    , withValue (singleton "hello" "world" 114514)
+                    , withValue (singleton (CurrencySymbol "hello") (TokenName "world") 114514)
                     , withRefIndex 1919810
                     , withRefTxId "232d7527be97b9abe27c0d7578c9e09ad11f40d83391006714a2e40d"
                     ]

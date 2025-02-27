@@ -34,15 +34,16 @@ import PlutusLedgerApi.V1.Value (AssetClass (AssetClass), assetClassValueOf)
 import PlutusLedgerApi.V2 (
   Address (Address),
   Credential (PubKeyCredential),
+  CurrencySymbol (CurrencySymbol),
   PubKeyHash (PubKeyHash),
   ScriptContext (scriptContextTxInfo),
   StakingCredential (StakingHash, StakingPtr),
+  TokenName (TokenName),
   TxInfo (txInfoOutputs),
   TxOut (txOutValue),
   Value (Value),
   adaSymbol,
   adaToken,
-  fromList,
   singleton,
   txInfoWdrl,
  )
@@ -72,27 +73,27 @@ main = do
     , MintingBuilder.specs
     , testCase "normalizeValue removes 0 entries unless they are ADA" $
         ( getValue . normalizeValue . Value $
-            fromList
-              [ ("cc", fromList [("token name", 0)])
+            AssocMap.unsafeFromList
+              [ (CurrencySymbol "cc", AssocMap.unsafeFromList [(TokenName "token name", 0)])
               , zeroAdaTuple
               ]
         )
-          @?= (getValue . Value $ fromList [zeroAdaTuple])
+          @?= (getValue . Value $ AssocMap.unsafeFromList [zeroAdaTuple])
     , testCase "normalizeValue adds 0 ADA entry if it is missing" $
-        (getValue . normalizeValue . Value $ fromList [])
-          @?= (getValue . Value $ fromList [zeroAdaTuple])
+        (getValue . normalizeValue . Value $ AssocMap.unsafeFromList [])
+          @?= (getValue . Value $ AssocMap.unsafeFromList [zeroAdaTuple])
     , testCase "normalizeValue adds matching entries" $
         ( getValue . normalizeValue . Value $
-            fromList
+            AssocMap.unsafeFromList
               [ zeroAdaTuple
-              , ("cc", fromList [("token", 1)])
-              , ("cc", fromList [("token", 1)])
+              , (CurrencySymbol "cc", AssocMap.unsafeFromList [(TokenName "token", 1)])
+              , (CurrencySymbol "cc", AssocMap.unsafeFromList [(TokenName "token", 1)])
               ]
         )
           @?= ( getValue . Value $
-                  fromList
+                  AssocMap.unsafeFromList
                     [ zeroAdaTuple
-                    , ("cc", fromList [("token", 2)])
+                    , (CurrencySymbol "cc", AssocMap.unsafeFromList [(TokenName "token", 2)])
                     ]
               )
     , testCase "mkNormalized retains ADA entry in output value" $
@@ -101,20 +102,20 @@ main = do
           (AssetClass (adaSymbol, adaToken))
           @?= 10000
     , testCase "non-Ada tokens are dropped by `normalizeValue`" $
-        ( normalizeValue . Value . AssocMap.fromList $
+        ( normalizeValue . Value . AssocMap.unsafeFromList $
             [
               ( adaSymbol
-              , AssocMap.fromList
+              , AssocMap.unsafeFromList
                   [ (adaToken, 100)
-                  , ("nonAdaToken", 100)
+                  , (TokenName "nonAdaToken", 100)
                   ]
               )
             ]
         )
-          @?= ( Value . AssocMap.fromList $
+          @?= ( Value . AssocMap.unsafeFromList $
                   [
                     ( adaSymbol
-                    , AssocMap.fromList [(adaToken, 100)]
+                    , AssocMap.unsafeFromList [(adaToken, 100)]
                     )
                   ]
               )
@@ -122,10 +123,10 @@ main = do
         "adding a withdrawal has the expected behavior when building a Txinfo"
         $ let stakingCred = StakingHash $ PubKeyCredential "abcd"
            in txInfoWdrl (buildTxInfo (withdrawal stakingCred 1))
-                @?= fromList [(stakingCred, 1)]
+                @?= AssocMap.unsafeFromList [(stakingCred, 1)]
     ]
   where
-    a = buildMinting mempty (mkNormalized $ generalSample <> withMinting "aaaa")
+    a = buildMinting mempty (mkNormalized $ generalSample <> withMinting (CurrencySymbol "aaaa"))
     b =
       buildSpending
         mempty
@@ -141,7 +142,7 @@ main = do
     c = buildTxInfo $ mkNormalized generalSample
     d = buildTxOuts $ mkNormalized generalSample
 
-    zeroAdaTuple = (adaSymbol, fromList [(adaToken, 0)])
+    zeroAdaTuple = (adaSymbol, AssocMap.unsafeFromList [(adaToken, 0)])
 
     adaOutput10000 = buildMinting' $ mkNormalized $ output $ withValue (singleton adaSymbol adaToken 10000)
 
@@ -155,22 +156,22 @@ generalSample =
           <> withStakingCredential (StakingPtr 0 0 0)
     , input $
         address (Address (PubKeyCredential $ PubKeyHash "aa") (Just $ StakingPtr 1 2 3))
-          <> withValue (singleton "cc" "hello" 123)
+          <> withValue (singleton (CurrencySymbol "cc") (TokenName "hello") 123)
           <> withHashDatum (123 :: Integer)
           <> withRefTxId "eeff"
     , output $
         script "cccc"
-          <> withValue (singleton "dd" "world" 123)
-    , mint $ singleton "aaaa" "hello" 333
+          <> withValue (singleton (CurrencySymbol "dd") (TokenName "world") 123)
+    , mint $ singleton (CurrencySymbol "aaaa") (TokenName "hello") 333
     ]
 
 nonNormalizedValue :: Value
 nonNormalizedValue =
   Value $
-    AssocMap.fromList $
-      second AssocMap.fromList
-        <$> [ ("ccaa", [("c", 2), ("tokenhi", 10), ("hello", 30)])
-            , ("ccaa", [("tokenhi", 30), ("a", 2), ("world", 40), ("b", 1)])
-            , ("eeff", [("hey", 123)])
-            , ("ccaa", [("hello", 20), ("b", 2), ("world", 20)])
+    AssocMap.unsafeFromList $
+      second AssocMap.unsafeFromList
+        <$> [ (CurrencySymbol "ccaa", [(TokenName "c", 2), (TokenName "tokenhi", 10), (TokenName "hello", 30)])
+            , (CurrencySymbol "ccaa", [(TokenName "tokenhi", 30), (TokenName "a", 2), (TokenName "world", 40), (TokenName "b", 1)])
+            , (CurrencySymbol "eeff", [(TokenName "hey", 123)])
+            , (CurrencySymbol "ccaa", [(TokenName "hello", 20), (TokenName "b", 2), (TokenName "world", 20)])
             ]

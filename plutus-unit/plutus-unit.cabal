@@ -40,7 +40,7 @@ common common-lang
     ghc-options: -Werror
 
   build-depends:
-    , base      ^>=4.16
+    , base
 
   default-extensions:
     NoStarIsType
@@ -89,6 +89,6 @@ library
     , tagged
     , tasty
     , text
-    , plutus-core
+    , plutus-core >=1.40.0.0 && <1.41
 
   hs-source-dirs:  src
