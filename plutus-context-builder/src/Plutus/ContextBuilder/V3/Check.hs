@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Plutus.ContextBuilder.Check (
+module Plutus.ContextBuilder.V3.Check (
   Checker (..),
   CheckerErrorType (..),
   CheckerPos (..),
@@ -26,14 +26,14 @@ module Plutus.ContextBuilder.Check (
   checkInputs,
   checkReferenceInputs,
   checkMints,
-  checkFee,
   checkOutputs,
   checkDatumPairs,
   checkPhase1,
   checkNormalized,
   checkValidatorRedeemer,
   checkValueNormalized,
-) where
+)
+where
 
 import Acc (Acc)
 import Control.Arrow ((&&&))
@@ -47,7 +47,7 @@ import Data.Kind (Type)
 import Data.Maybe (fromMaybe)
 import Data.Void (absurd)
 import Optics (view)
-import Plutus.ContextBuilder.Base (
+import Plutus.ContextBuilder.V3.Base (
   Builder,
   UTXO,
   mintToValue,
@@ -55,7 +55,8 @@ import Plutus.ContextBuilder.Base (
   normalizeValue,
   unpack,
  )
-import PlutusLedgerApi.V2 (
+import PlutusLedgerApi.V1 (lovelaceValue)
+import PlutusLedgerApi.V3 (
   BuiltinByteString,
   Credential (PubKeyCredential, ScriptCredential),
   CurrencySymbol,
@@ -75,7 +76,7 @@ import Prettyprinter qualified as P
 
 {- | Possible errors from phase-1 checker
 
- @since 2.1.0
+@since 3.0.0
 -}
 data CheckerErrorType e
   = IncorrectByteString LedgerBytes
@@ -94,7 +95,7 @@ data CheckerErrorType e
 
 {- | Possible positions for errors from phase-1 checker
 
- @since 2.1.0
+@since 3.0.0
 -}
 data CheckerPos
   = AtInput
@@ -109,12 +110,12 @@ data CheckerPos
   | AtTxInfo
   deriving stock (Show, Eq)
 
--- | @since 2.1.0
+-- | @since 3.0.0
 newtype CheckerError e
   = CheckerError (CheckerErrorType e, CheckerPos)
   deriving stock (Show)
 
--- | @since 2.1.0
+-- | @since 3.0.0
 instance (P.Pretty e) => P.Pretty (CheckerErrorType e) where
   pretty (IncorrectByteString lb) =
     "\"" <> P.pretty lb <> "\"" P.<+> "is an invalid bytestring"
@@ -139,11 +140,11 @@ instance (P.Pretty e) => P.Pretty (CheckerErrorType e) where
     "Set redeemer for a input that is not owned by a validator"
   pretty (OtherError e) = P.pretty e
 
--- | @since 2.1.0
+-- | @since 3.0.0
 instance P.Pretty CheckerPos where
   pretty = P.pretty . drop 2 . show
 
--- | @since 2.1.0
+-- | @since 3.0.0
 instance (P.Pretty e) => P.Pretty (CheckerError e) where
   pretty (CheckerError (err, at)) =
     "Error at"
@@ -154,21 +155,21 @@ instance (P.Pretty e) => P.Pretty (CheckerError e) where
 
 {- | Checker that accumulates error.
 
- @since 2.5.0
+@since 3.0.0
 -}
 newtype Checker (e :: Type) (a :: Type) = Checker (a -> Acc (CheckerError e))
 
--- | @since 2.1.0
+-- | @since 3.0.0
 instance Contravariant (Checker e) where
   contramap f (Checker x) = Checker $ \y -> x . f $ y
 
--- | @since 2.1.0
+-- | @since 3.0.0
 instance Divisible (Checker e) where
   conquer = Checker $ const mempty
   divide f x y =
     Checker $ \(f -> (x', y')) -> runChecker x x' <> runChecker y y'
 
--- | @since 2.1.0
+-- | @since 3.0.0
 instance Decidable (Checker e) where
   lose f = Checker $ \a -> absurd $ f a
   choose f x y = Checker $ \(f -> c) ->
@@ -176,15 +177,15 @@ instance Decidable (Checker e) where
       Left x' -> runChecker x x'
       Right y' -> runChecker y y'
 
--- | @since 2.1.0
+-- | @since 3.0.0
 instance Semigroup (Checker e a) where
   f <> g = Checker $ \y -> runChecker f y <> runChecker g y
 
--- | @since 2.1.0
+-- | @since 3.0.0
 instance Monoid (Checker e a) where
   mempty = Checker $ const mempty
 
--- | @since 2.5.0
+-- | @since 3.0.0
 runChecker ::
   forall (e :: Type) (a :: Type).
   Checker e a ->
@@ -194,16 +195,16 @@ runChecker (Checker f) = f
 
 {- | Render and prettified list of errors.
 
- @since 2.1.0
+@since 3.0.0
 -}
 renderErrors :: (Foldable t, P.Pretty e) => t (CheckerError e) -> String
 renderErrors err =
   show . P.indent 4 $ P.line <> P.vsep (P.pretty <$> toList err)
 
 {- | Check type @a@ with given checker. It returns input
- if there are no errors; throws error if not.
+if there are no errors; throws error if not.
 
- @since 2.1.0
+@since 3.0.0
 -}
 handleErrors :: (P.Pretty e) => Checker e a -> a -> a
 handleErrors checker x
@@ -213,23 +214,23 @@ handleErrors checker x
     errs = runChecker checker x
 
 {- | Construct `CheckerError` from `CheckerErrorType` with default
- position and as singleton.
+position and as singleton.
 
- @since 2.1.0
+@since 3.0.0
 -}
 basicError :: CheckerErrorType e -> Acc (CheckerError e)
 basicError err = pure $ CheckerError (err, AtTxInfo)
 
 {- | Check that always fails with given error.
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkFail :: CheckerErrorType e -> Checker e a
 checkFail = Checker . const . basicError
 
 {- | Update/Override checker position.
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkAt :: CheckerPos -> Checker e a -> Checker e a
 checkAt at c = Checker (fmap (updatePos at) . runChecker c)
@@ -237,16 +238,16 @@ checkAt at c = Checker (fmap (updatePos at) . runChecker c)
     updatePos at' (CheckerError (x, _)) = CheckerError (x, at')
 
 {- | Apply checker type @a@ to foldable @t a@. It will check all
- elements of the foldable structure.
+elements of the foldable structure.
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkFoldable :: (Foldable t) => Checker e a -> Checker e (t a)
 checkFoldable c = Checker $ \y -> foldMap (runChecker c) y
 
 {- | Build checker with a predicate.
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkIf :: (a -> Bool) -> CheckerErrorType e -> Checker e a
 checkIf f err = Checker $ \y ->
@@ -256,31 +257,31 @@ checkIf f err = Checker $ \y ->
 
 {- | Build checker that checks @Bool@.
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkBool :: CheckerErrorType e -> Checker e Bool
 checkBool = checkIf id
 
 {- | Build checker via CPS computation. This allows to pick up
- what is given to checker and use that externally.
+what is given to checker and use that externally.
 
 === Example:
 @
 checkWith $ \x ->
-        contramap
-            (all (\(cs, tk, _) -> cs /= adaSymbol && tk /= adaToken) . flattenValue)
-            (checkBool $ MintingAda x)
+      contramap
+          (all (\(cs, tk, _) -> cs /= adaSymbol && tk /= adaToken) . flattenValue)
+          (checkBool $ MintingAda x)
 @
 It is especially useful when one needs to provide error some specific information.
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkWith :: (a -> Checker e a) -> Checker e a
 checkWith x = Checker $ \y -> runChecker (x y) y
 
 {- | Combination of `checkIf` and `checkWith`.
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkIfWith :: (a -> Bool) -> (a -> CheckerErrorType e) -> Checker e a
 checkIfWith f err = Checker $ \y ->
@@ -290,7 +291,7 @@ checkIfWith f err = Checker $ \y ->
 
 {- | Verify on-chain bytestring if it matches the given length
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkBSLength :: Int -> Checker e BuiltinByteString
 checkBSLength len =
@@ -301,7 +302,7 @@ checkBSLength len =
 
 {- | Check if all tokens in `Value` are positive.
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkPositiveValue :: Checker e Value
 checkPositiveValue =
@@ -311,7 +312,7 @@ checkPositiveValue =
 
 {- | Check if 'Value' is normalized.
 
- @since 2.4.0
+@since 3.0.0
 -}
 checkValueNormalized :: Checker e Value
 checkValueNormalized =
@@ -327,7 +328,7 @@ checkCredential = contramap classif $ checkBSLength 28
 
 {- | Check if a validator output has a redeemer attached.
 
- @since 2.3.0
+@since 3.0.0
 -}
 checkValidatorRedeemer :: Checker e UTXO
 checkValidatorRedeemer =
@@ -342,7 +343,7 @@ checkValidatorRedeemer =
 
 {- | Check if TxId follows the format
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkTxId :: (Builder a) => Checker e a
 checkTxId =
@@ -351,7 +352,7 @@ checkTxId =
 
 {- | Check if atleast one signature exists and all follows the format.
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkSignatures :: (Builder a) => Checker e a
 checkSignatures =
@@ -363,7 +364,7 @@ checkSignatures =
 
 {- | Check if input, output, mint have zero sum.
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkZeroSum :: (Builder a) => Checker e a
 checkZeroSum = Checker $
@@ -374,13 +375,14 @@ checkZeroSum = Checker $
         i = mconcat . toList $ view #value <$> view #inputs bb
         o = mconcat . toList $ view #value <$> view #outputs bb
         m = foldMap mintToValue . toList . view #mints $ bb
-     in if i <> m /= o <> view #fee bb
-          then basicError $ NoZeroSum (diff (i <> m <> view #fee bb) o)
+        f = lovelaceValue $ view #fee bb
+     in if i <> m /= o <> f
+          then basicError $ NoZeroSum (diff (i <> m <> f) o)
           else mempty
 
 {- | Check if all input UTXOs follow format and have TxOutRef.
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkInputs :: (Builder a) => Checker e a
 checkInputs =
@@ -418,7 +420,7 @@ checkInputs =
 
 {- | Check if all reference input UTXOs follow format.
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkReferenceInputs :: (Builder a) => Checker e a
 checkReferenceInputs =
@@ -434,7 +436,7 @@ checkReferenceInputs =
 
 {- | Check if minted tokens are valid.
 
- @since 2.6.2
+@since 3.0.0
 -}
 checkMints :: (Builder a) => Checker e a
 checkMints =
@@ -454,24 +456,9 @@ checkMints =
         )
         (checkBool $ MintingAda x)
 
-{- | Check if fee amount is valid.
-
- @since 2.1.0
--}
-checkFee :: (Builder a) => Checker e a
-checkFee =
-  checkAt AtFee $
-    contramap (view #fee . unpack) onlyAda
-  where
-    onlyAda :: Checker e Value
-    onlyAda = checkWith $ \x ->
-      contramap
-        (all (\(cs, tk, _) -> cs == adaSymbol && tk == adaToken) . flattenValue)
-        (checkBool $ NonAdaFee x)
-
 {- | Check if all output UTXOs follow format.
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkOutputs :: (Builder a) => Checker e a
 checkOutputs =
@@ -485,7 +472,7 @@ checkOutputs =
 
 {- | Check if builder does not provide excess datum.
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkDatumPairs :: (Builder a) => Checker e a
 checkDatumPairs =
@@ -494,7 +481,7 @@ checkDatumPairs =
 
 {- | Check if values in builder are normalized.
 
- @since 2.4.0
+@since 3.0.0
 -}
 checkNormalized :: (Builder a) => Checker e a
 checkNormalized =
@@ -516,7 +503,7 @@ checkNormalized =
 
 {- | All checks combined for Phase-1 check.
 
- @since 2.1.0
+@since 3.0.0
 -}
 checkPhase1 :: (Builder a) => [Checker e a]
 checkPhase1 =
@@ -525,7 +512,6 @@ checkPhase1 =
   , checkOutputs
   , checkDatumPairs
   , checkMints
-  , checkFee
   , checkTxId
   , checkZeroSum
   , checkSignatures
@@ -533,7 +519,7 @@ checkPhase1 =
 
 {- | Flatten value into tuple of `CurrencySymbol`, `TokenName`, and `Integer`.
 
- @since 2.1.0
+@since 3.0.0
 -}
 flattenValue :: Value -> [(CurrencySymbol, TokenName, Integer)]
 flattenValue x =

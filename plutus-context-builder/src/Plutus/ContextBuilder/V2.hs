@@ -1,4 +1,4 @@
-{- | Module: Plutus.Context
+{- | Module: Plutus.ContextBuilder.V2
  Copyright: (C) Liqwid Labs 2022
  License: Proprietary
  Maintainer: Koz Ross <koz@mlabs.city>
@@ -7,7 +7,7 @@
 
  Base builder and other specific builders.
 -}
-module Plutus.ContextBuilder (
+module Plutus.ContextBuilder.V2 (
   B.Builder (..),
   B.BaseBuilder,
   B.UTXO,
@@ -112,13 +112,13 @@ module Plutus.ContextBuilder (
   I.mkNormalized,
 ) where
 
-import Plutus.ContextBuilder.Base qualified as B
-import Plutus.ContextBuilder.Certifying qualified as CE
-import Plutus.ContextBuilder.Check qualified as C
-import Plutus.ContextBuilder.Minting qualified as M
-import Plutus.ContextBuilder.Rewarding qualified as R
-import Plutus.ContextBuilder.Spending qualified as S
-import Plutus.ContextBuilder.SubBuilder qualified as Sub
-import Plutus.ContextBuilder.TxInfo qualified as T
+import Plutus.ContextBuilder.V2.Base qualified as B
+import Plutus.ContextBuilder.V2.Certifying qualified as CE
+import Plutus.ContextBuilder.V2.Check qualified as C
+import Plutus.ContextBuilder.V2.Minting qualified as M
+import Plutus.ContextBuilder.V2.Rewarding qualified as R
+import Plutus.ContextBuilder.V2.Spending qualified as S
+import Plutus.ContextBuilder.V2.SubBuilder qualified as Sub
+import Plutus.ContextBuilder.V2.TxInfo qualified as T
 
-import Plutus.ContextBuilder.Internal qualified as I
+import Plutus.ContextBuilder.V2.Internal qualified as I

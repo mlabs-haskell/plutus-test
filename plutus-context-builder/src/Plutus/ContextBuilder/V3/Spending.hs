@@ -3,17 +3,17 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
-{- | Module: Plutus.ContextBuilder.Spending
- Copyright: (C) Liqwid Labs 2022
- Maintainer: Koz Ross <koz@mlabs.city>
- Portability: GHC only
- Stability: Experimental
+{- | Module: Plutus.ContextBuilder.V3.Spending
+Copyright: (C) Liqwid Labs 2022
+Maintainer: Koz Ross <koz@mlabs.city>
+Portability: GHC only
+Stability: Experimental
 
- Builder for spending contexts. 'SpendingBuilder' is an instance of 'Semigroup',
- which allows combining the results of this API's functions into a larger
- 'SpendingBuilder' using '<>'.
+Builder for spending contexts. 'SpendingBuilder' is an instance of 'Semigroup',
+which allows combining the results of this API's functions into a larger
+'SpendingBuilder' using '<>'.
 -}
-module Plutus.ContextBuilder.Spending (
+module Plutus.ContextBuilder.V3.Spending (
   -- * Types
   SpendingBuilder,
 
@@ -22,21 +22,24 @@ module Plutus.ContextBuilder.Spending (
   withSpendingOutRef,
   withSpendingOutRefId,
   withSpendingOutRefIdx,
+  withDatum,
 
   -- * builder
   buildSpending',
   buildSpending,
   tryBuildSpending,
   checkSpending,
-) where
+)
+where
 
+import Control.Applicative ((<|>))
 import Control.Arrow ((&&&))
 import Data.Foldable (Foldable (toList))
 import Data.Functor.Contravariant (contramap)
 import Data.Functor.Contravariant.Divisible (choose)
 import Data.Maybe (isJust)
 import Optics (A_Lens, LabelOptic (labelOptic), lens, set, view)
-import Plutus.ContextBuilder.Base (
+import Plutus.ContextBuilder.V3.Base (
   BaseBuilder,
   Builder (pack, _bb),
   UTXO,
@@ -48,17 +51,18 @@ import Plutus.ContextBuilder.Base (
   yieldInInfoDatums,
   yieldMint,
   yieldOutDatums,
+  yieldRedeemer,
   yieldRedeemerMap,
  )
-import Plutus.ContextBuilder.Check
-import Plutus.ContextBuilder.Internal (Normalizer (mkNormalized'), mkNormalized)
-import PlutusLedgerApi.V2 (
+import Plutus.ContextBuilder.V3.Check
+import Plutus.ContextBuilder.V3.Internal (Normalizer (mkNormalized'), mkNormalized)
+import PlutusLedgerApi.V3 (
+  Datum,
   ScriptContext (ScriptContext),
-  ScriptPurpose (Spending),
+  ScriptInfo (SpendingScript),
   TxId,
   TxInInfo (txInInfoOutRef, txInInfoResolved),
   TxInfo (
-    txInfoDCert,
     txInfoData,
     txInfoInputs,
     txInfoMint,
@@ -66,6 +70,7 @@ import PlutusLedgerApi.V2 (
     txInfoRedeemers,
     txInfoReferenceInputs,
     txInfoSignatories,
+    txInfoTxCerts,
     txInfoWdrl
   ),
   TxOutRef (..),
@@ -81,11 +86,11 @@ data ValidatorInputIdentifier
   deriving stock (Show)
 
 {- | A context builder for spending. Corresponds broadly to validators, and to
- 'PlutusLedgerApi.V1.Contexts.Spending' specifically.
+'PlutusLedgerApi.V1.Contexts.Spending' specifically.
 
- @since 2.5.0
+@since 3.0.0
 -}
-data SpendingBuilder = SB BaseBuilder (Maybe ValidatorInputIdentifier)
+data SpendingBuilder = SB BaseBuilder (Maybe ValidatorInputIdentifier) (Maybe Datum)
 
 {-
   { sbInner :: BaseBuilder
@@ -93,39 +98,43 @@ data SpendingBuilder = SB BaseBuilder (Maybe ValidatorInputIdentifier)
   }
   -}
 
--- | @since 2.5.0
+-- | @since 3.0.0
 instance
   (k ~ A_Lens, a ~ BaseBuilder, b ~ BaseBuilder) =>
   LabelOptic "inner" k SpendingBuilder SpendingBuilder a b
   where
-  labelOptic = lens (\(SB x _) -> x) $ \(SB _ vi) inner' -> SB inner' vi
+  labelOptic = lens (\(SB x _ _) -> x) $ \(SB _ vi dat) inner' -> SB inner' vi dat
 
--- | @since 2.5.0
+-- | @since 3.0.0
 instance
   (k ~ A_Lens, a ~ Maybe ValidatorInputIdentifier, b ~ Maybe ValidatorInputIdentifier) =>
   LabelOptic "validatorInput" k SpendingBuilder SpendingBuilder a b
   where
-  labelOptic = lens (\(SB _ x) -> x) $ \(SB inner _) vi' -> SB inner vi'
+  labelOptic = lens (\(SB _ x _) -> x) $ \(SB inner _ dat) vi' -> SB inner vi' dat
 
--- | @since 1.1.0
+-- | @since 3.0.0
+instance
+  (k ~ A_Lens, a ~ Maybe Datum, b ~ Maybe Datum) =>
+  LabelOptic "datum" k SpendingBuilder SpendingBuilder a b
+  where
+  labelOptic = lens (\(SB _ _ x) -> x) $ \(SB inner vi _) dat' -> SB inner vi dat'
+
+-- | @since 3.0.0
 instance Builder SpendingBuilder where
   _bb = #inner
   pack x = set #inner x (mempty :: SpendingBuilder)
 
--- | @since 1.0.0
+-- | @since 3.0.0
 instance Semigroup SpendingBuilder where
-  SB inner _ <> SB inner' (Just vin') =
-    SB (inner <> inner') $ Just vin'
-  SB inner vInRef <> SB inner' Nothing =
-    SB (inner <> inner') vInRef
+  SB inner vin dat <> SB inner' vin' dat' = SB (inner <> inner') (vin' <|> vin) (dat' <|> dat)
 
--- | @since 1.1.0
+-- | @since 3.0.0
 instance Monoid SpendingBuilder where
-  mempty = SB mempty Nothing
+  mempty = SB mempty Nothing Nothing
 
 instance Normalizer SpendingBuilder where
-  mkNormalized' (SB bb vi) =
-    SB (mkNormalized bb) (normalize <$> vi)
+  mkNormalized' (SB bb vi dat) =
+    SB (mkNormalized bb) (normalize <$> vi) dat
     where
       normalize x =
         case x of
@@ -133,9 +142,9 @@ instance Normalizer SpendingBuilder where
           a -> a
 
 {- | Set Validator Input with given UTXO. Note, the given UTXO should
-   exist in the inputs, otherwise the builder would fail.
+exist in the inputs, otherwise the builder would fail.
 
- @since 2.0.0
+@since 3.0.0
 -}
 withSpendingUTXO ::
   UTXO ->
@@ -144,9 +153,9 @@ withSpendingUTXO u =
   set #validatorInput (pure . ValidatorUTXO $ u) (mempty :: SpendingBuilder)
 
 {- | Set Validator Input with given TxOutRef. Note, input with given
-   TxOutRef should exist, otherwise the builder would fail.
+TxOutRef should exist, otherwise the builder would fail.
 
- @since 2.0.0
+@since 3.0.0
 -}
 withSpendingOutRef ::
   TxOutRef ->
@@ -155,9 +164,9 @@ withSpendingOutRef outref =
   set #validatorInput (pure . ValidatorOutRef $ outref) (mempty :: SpendingBuilder)
 
 {- | Set Validator Input with given TxOutRefId. Note, input with given
-   TxOutRefId should exist, otherwise the builder would fail.
+TxOutRefId should exist, otherwise the builder would fail.
 
- @since 2.0.0
+@since 3.0.0
 -}
 withSpendingOutRefId ::
   TxId ->
@@ -166,15 +175,25 @@ withSpendingOutRefId tid =
   set #validatorInput (pure . ValidatorOutRefId $ tid) (mempty :: SpendingBuilder)
 
 {- | Set Validator Input with given TxOutRefIdx. Note, input with given
-   TxOutRefIdx should exist, otherwise the builder would fail.
+TxOutRefIdx should exist, otherwise the builder would fail.
 
- @since 2.0.0
+@since 3.0.0
 -}
 withSpendingOutRefIdx ::
   Integer ->
   SpendingBuilder
 withSpendingOutRefIdx tidx =
   set #validatorInput (pure . ValidatorOutRefIdx $ tidx) (mempty :: SpendingBuilder)
+
+{- | Set Validator Input with given Datum.
+
+@since 3.0.0
+-}
+withDatum ::
+  Datum ->
+  SpendingBuilder
+withDatum datum =
+  set #datum (Just datum) (mempty :: SpendingBuilder)
 
 yieldValidatorInput ::
   [TxInInfo] ->
@@ -193,9 +212,9 @@ yieldValidatorInput ins = \case
         (r : _) -> return $ txInInfoOutRef r
 
 {- | Builds @ScriptContext@ according to given configuration and
- @SpendingBuilder@.
+@SpendingBuilder@.
 
- @since 2.1.0
+@since 3.0.0
 -}
 buildSpending' ::
   SpendingBuilder ->
@@ -218,36 +237,38 @@ buildSpending' builder@(unpack -> bb) =
           , txInfoSignatories = toList . view #signatures $ bb
           , txInfoRedeemers = AssocMap.unsafeFromList $ toList (view #redeemers bb) <> redeemerMap
           , txInfoWdrl = AssocMap.unsafeFromList $ toList (view #withdrawals bb)
-          , txInfoDCert = toList (view #dcerts bb)
+          , txInfoTxCerts = toList (view #txcerts bb)
           }
       vInRef = case view #validatorInput builder >>= yieldValidatorInput ins of
         Nothing -> TxOutRef "" 0
         Just ref -> ref
-   in ScriptContext txinfo (Spending vInRef)
+      datum = view #datum builder
+      redeemer = yieldRedeemer . view #redeemer $ bb
+   in ScriptContext txinfo redeemer (SpendingScript vInRef datum)
 
 {- | Check builder with provided checker, then build spending context.
 
- @since 2.1.0
+@since 3.0.0
 -}
 buildSpending :: [Checker SpendingError SpendingBuilder] -> SpendingBuilder -> ScriptContext
 buildSpending c = buildSpending' . handleErrors (mconcat c <> checkSpending)
 
 {- | Same as `buildSpending` but instead of throwing error it returns `Either`.
 
- @since 2.1.0
+@since 3.0.0
 -}
 tryBuildSpending :: Checker SpendingError SpendingBuilder -> SpendingBuilder -> Either [CheckerError SpendingError] ScriptContext
 tryBuildSpending c b = case toList $ runChecker (c <> checkSpending) b of
   [] -> Right $ buildSpending' b
   errs -> Left errs
 
--- | @since 2.1.0
+-- | @since 3.0.0
 data SpendingError
   = ValidatorInputDoesNotExists ValidatorInputIdentifier
   | ValidatorInputNotGiven
   deriving stock (Show)
 
--- | @since 2.1.0
+-- | @since 3.0.0
 instance P.Pretty SpendingError where
   pretty (ValidatorInputDoesNotExists x) =
     "Given validator input does not exist in inputs: "
@@ -255,7 +276,7 @@ instance P.Pretty SpendingError where
       <> P.indent 4 (P.pretty (show x))
   pretty ValidatorInputNotGiven = "Validator Input is not specified"
 
--- | @since 2.1.0
+-- | @since 3.0.0
 checkSpending :: Checker SpendingError SpendingBuilder
 checkSpending =
   checkAt AtInput $

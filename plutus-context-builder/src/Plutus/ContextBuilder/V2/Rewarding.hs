@@ -3,30 +3,30 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
-{- | Module: Plutus.ContextBuilder.Rewarding
+{- | Module: Plutus.ContextBuilder.V2.Rewarding
  Copyright: (C) Liqwid Labs 2022
  Maintainer: Seungheon Oh <seungheon@mlabs.city>
  Portability: GHC only
  Stability: Experimental
 
- Builder for rewarding contexts. 'CertifyingBuilder' is an instance of 'Semigroup',
+ Builder for rewarding contexts. 'RewardingBuilder' is an instance of 'Semigroup',
  which allows combining the results of this API's functions into a larger
- 'CertifyingBuilder' using '<>'.
+ 'RewardingBuilder' using '<>'.
 -}
-module Plutus.ContextBuilder.Certifying (
+module Plutus.ContextBuilder.V2.Rewarding (
   -- * Types
-  CertifyingBuilder,
+  RewardingBuilder,
 
   -- * Input
-  withCertifying,
+  withRewarding,
 
   -- * builder
-  buildCertifying',
+  buildRewarding',
 ) where
 
 import Data.Foldable (Foldable (toList))
 import Optics (A_Lens, LabelOptic (labelOptic), lens, set, view)
-import Plutus.ContextBuilder.Base (
+import Plutus.ContextBuilder.V2.Base (
   BaseBuilder,
   Builder (pack, _bb),
   unpack,
@@ -37,11 +37,12 @@ import Plutus.ContextBuilder.Base (
   yieldOutDatums,
   yieldRedeemerMap,
  )
-import Plutus.ContextBuilder.Internal (Normalizer (mkNormalized'), mkNormalized)
+import Plutus.ContextBuilder.V2.Internal (Normalizer (mkNormalized'), mkNormalized)
 import PlutusLedgerApi.V2 (
-  DCert (DCertGenesis),
+  Credential (PubKeyCredential),
   ScriptContext (ScriptContext),
-  ScriptPurpose (Certifying),
+  ScriptPurpose (Rewarding),
+  StakingCredential (StakingHash),
   TxInfo (
     txInfoDCert,
     txInfoData,
@@ -56,12 +57,12 @@ import PlutusLedgerApi.V2 (
  )
 import PlutusTx.AssocMap qualified as AssocMap
 
-{- | A context builder for Certifying. Corresponds to
- 'Plutus.V1.Ledger.Contexts.Certifying' specifically.
+{- | A context builder for Rewarding. Corresponds to
+ 'Plutus.V1.Ledger.Contexts.Rewarding' specifically.
 
  @since 2.8.0
 -}
-data CertifyingBuilder = CB BaseBuilder (Maybe DCert)
+data RewardingBuilder = RB BaseBuilder (Maybe StakingCredential)
   deriving stock
     ( -- | @since 2.8.0
       Show
@@ -70,54 +71,54 @@ data CertifyingBuilder = CB BaseBuilder (Maybe DCert)
 -- | @since 2.8.0
 instance
   (k ~ A_Lens, a ~ BaseBuilder, b ~ BaseBuilder) =>
-  LabelOptic "inner" k CertifyingBuilder CertifyingBuilder a b
+  LabelOptic "inner" k RewardingBuilder RewardingBuilder a b
   where
-  labelOptic = lens (\(CB x _) -> x) $ \(CB _ cs) inner' -> CB inner' cs
+  labelOptic = lens (\(RB x _) -> x) $ \(RB _ cs) inner' -> RB inner' cs
 
 -- | @since 2.8.0
 instance
-  (k ~ A_Lens, a ~ Maybe DCert, b ~ Maybe DCert) =>
-  LabelOptic "certifyingDCert" k CertifyingBuilder CertifyingBuilder a b
+  (k ~ A_Lens, a ~ Maybe StakingCredential, b ~ Maybe StakingCredential) =>
+  LabelOptic "rewardingCred" k RewardingBuilder RewardingBuilder a b
   where
-  labelOptic = lens (\(CB _ x) -> x) $ \(CB inner _) cs' -> CB inner cs'
+  labelOptic = lens (\(RB _ x) -> x) $ \(RB inner _) cs' -> RB inner cs'
 
 -- | @since 2.8.0
-instance Semigroup CertifyingBuilder where
-  CB inner _ <> CB inner' cs@(Just _) =
-    CB (inner <> inner') cs
-  CB inner cs <> CB inner' Nothing =
-    CB (inner <> inner') cs
+instance Semigroup RewardingBuilder where
+  RB inner _ <> RB inner' cs@(Just _) =
+    RB (inner <> inner') cs
+  RB inner cs <> RB inner' Nothing =
+    RB (inner <> inner') cs
 
 -- | @since 2.8.0
-instance Monoid CertifyingBuilder where
-  mempty = CB mempty Nothing
+instance Monoid RewardingBuilder where
+  mempty = RB mempty Nothing
 
 -- | @since 2.8.0
-instance Builder CertifyingBuilder where
+instance Builder RewardingBuilder where
   _bb = #inner
-  pack x = set #inner x (mempty :: CertifyingBuilder)
+  pack x = set #inner x (mempty :: RewardingBuilder)
 
 -- | @since 2.8.0
-instance Normalizer CertifyingBuilder where
-  mkNormalized' (CB bb cs) =
-    CB (mkNormalized bb) cs
+instance Normalizer RewardingBuilder where
+  mkNormalized' (RB bb cs) =
+    RB (mkNormalized bb) cs
 
-{- | Set DCert for building Certifying ScriptContext.
+{- | Set CurrencySymbol for building Rewarding ScriptContext.
 
  @since 2.8.0
 -}
-withCertifying :: DCert -> CertifyingBuilder
-withCertifying sc = CB mempty $ Just sc
+withRewarding :: StakingCredential -> RewardingBuilder
+withRewarding sc = RB mempty $ Just sc
 
 {- | Builds @ScriptContext@ according to given configuration and
- @CertifyingBuilder@.
+ @RewardingBuilder@.
 
  @since 2.8.0
 -}
-buildCertifying' ::
-  CertifyingBuilder ->
+buildRewarding' ::
+  RewardingBuilder ->
   ScriptContext
-buildCertifying' builder@(unpack -> bb) =
+buildRewarding' builder@(unpack -> bb) =
   let (ins, inDat) = yieldInInfoDatums . view #inputs $ bb
       (refin, _) = yieldInInfoDatums . view #referenceInputs $ bb
       (outs, outDat) = yieldOutDatums . view #outputs $ bb
@@ -137,7 +138,7 @@ buildCertifying' builder@(unpack -> bb) =
           , txInfoWdrl = AssocMap.unsafeFromList $ toList (view #withdrawals bb)
           , txInfoDCert = toList (view #dcerts bb)
           }
-      rewardCred = case view #certifyingDCert builder of
-        Just dcert -> Certifying dcert
-        Nothing -> Certifying DCertGenesis
+      rewardCred = case view #rewardingCred builder of
+        Just cred -> Rewarding cred
+        Nothing -> Rewarding . StakingHash . PubKeyCredential $ ""
    in ScriptContext txinfo rewardCred

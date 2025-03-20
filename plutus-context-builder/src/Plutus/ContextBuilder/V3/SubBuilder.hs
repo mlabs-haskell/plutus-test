@@ -1,18 +1,19 @@
 {-# LANGUAGE ViewPatterns #-}
 
-module Plutus.ContextBuilder.SubBuilder (
+module Plutus.ContextBuilder.V3.SubBuilder (
   SubBuilder (..),
   buildTxOut,
   buildTxInInfo,
   buildTxOuts,
   buildTxInInfos,
   buildDatumHashPairs,
-) where
+)
+where
 
 import Data.Foldable (Foldable (toList))
 import Data.Maybe (fromMaybe, mapMaybe)
 import Optics (lens, view)
-import Plutus.ContextBuilder.Base (
+import Plutus.ContextBuilder.V3.Base (
   BaseBuilder,
   Builder (..),
   UTXO,
@@ -22,8 +23,8 @@ import Plutus.ContextBuilder.Base (
   utxoToTxOut,
   yieldInInfoDatums,
  )
-import Plutus.ContextBuilder.Internal (Normalizer (mkNormalized'), mkNormalized)
-import PlutusLedgerApi.V2 (
+import Plutus.ContextBuilder.V3.Internal (Normalizer (mkNormalized'), mkNormalized)
+import PlutusLedgerApi.V3 (
   Datum,
   DatumHash,
   TxInInfo (TxInInfo),
@@ -33,38 +34,38 @@ import PlutusLedgerApi.V2 (
 
 {- | Smaller builder that builds context smaller than TxInfo.
 
- @since 2.0.0
+@since 3.0.0
 -}
 newtype SubBuilder
   = SubBuilder BaseBuilder
   deriving
-    ( -- | @since 2.0.0
+    ( -- | @since 3.0.0
       Semigroup
-    , -- | @since 2.0.0
+    , -- | @since 3.0.0
       Monoid
     )
     via BaseBuilder
 
--- | @since 2.0.0
+-- | @since 3.0.0
 instance Builder SubBuilder where
   _bb = lens (\(SubBuilder x) -> x) (\_ b -> SubBuilder b)
   pack = SubBuilder
 
--- | @since 2.0.0
+-- | @since 3.0.0
 instance Normalizer SubBuilder where
   mkNormalized' (SubBuilder x) = SubBuilder $ mkNormalized x
 
 {- | Builds TxOut from `UTXO`.
 
- @since 2.0.0
+@since 3.0.0
 -}
 buildTxOut :: UTXO -> TxOut
 buildTxOut = utxoToTxOut
 
 {- | Builds 'TxInInfo' from `UTXO`. If TxId or TxIdx is not set, this will use
-     a default value ("" and 0, respectively) to create the 'TxInInfo'.
+   a default value ("" and 0, respectively) to create the 'TxInInfo'.
 
- @since 2.9.0
+@since 3.0.0
 -}
 buildTxInInfo :: UTXO -> TxInInfo
 buildTxInInfo u =
@@ -74,14 +75,14 @@ buildTxInInfo u =
 
 {- | Builds all TxOuts from given builder.
 
- @since 2.0.0
+@since 3.0.0
 -}
 buildTxOuts :: SubBuilder -> [TxOut]
 buildTxOuts (unpack -> bb) = utxoToTxOut <$> toList (view #outputs bb)
 
 {- | Builds all TxInInfos from given builder. Returns reason when failed.
 
- @since 2.1.0
+@since 3.0.0
 -}
 buildTxInInfos :: SubBuilder -> [TxInInfo]
 buildTxInInfos (unpack -> bb) =
@@ -89,7 +90,7 @@ buildTxInInfos (unpack -> bb) =
 
 {- | Builds Datum-Hash pair from all inputs, outputs, extra data of given builder.
 
- @since 2.0.0
+@since 3.0.0
 -}
 buildDatumHashPairs :: SubBuilder -> [(DatumHash, Datum)]
 buildDatumHashPairs (unpack -> bb) =

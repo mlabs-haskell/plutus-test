@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-context-builder
-version:            2.11.0
+version:            3.0.0
 synopsis:           A builder for ScriptContexts
 description:
   Defines a builder for ScriptContexts, with helpers for commonly-needed uses.
@@ -87,17 +87,28 @@ common common-tests
 
 library
   import:          common-lang
-  exposed-modules: Plutus.ContextBuilder
+  exposed-modules:
+    Plutus.ContextBuilder.V2
+    Plutus.ContextBuilder.V3
   other-modules:
-    Plutus.ContextBuilder.Base
-    Plutus.ContextBuilder.Certifying
-    Plutus.ContextBuilder.Check
-    Plutus.ContextBuilder.Internal
-    Plutus.ContextBuilder.Minting
-    Plutus.ContextBuilder.Rewarding
-    Plutus.ContextBuilder.Spending
-    Plutus.ContextBuilder.SubBuilder
-    Plutus.ContextBuilder.TxInfo
+    Plutus.ContextBuilder.V2.Base
+    Plutus.ContextBuilder.V2.Certifying
+    Plutus.ContextBuilder.V2.Check
+    Plutus.ContextBuilder.V2.Internal
+    Plutus.ContextBuilder.V2.Minting
+    Plutus.ContextBuilder.V2.Rewarding
+    Plutus.ContextBuilder.V2.Spending
+    Plutus.ContextBuilder.V2.SubBuilder
+    Plutus.ContextBuilder.V2.TxInfo
+    Plutus.ContextBuilder.V3.Base
+    Plutus.ContextBuilder.V3.Certifying
+    Plutus.ContextBuilder.V3.Check
+    Plutus.ContextBuilder.V3.Internal
+    Plutus.ContextBuilder.V3.Minting
+    Plutus.ContextBuilder.V3.Rewarding
+    Plutus.ContextBuilder.V3.Spending
+    Plutus.ContextBuilder.V3.SubBuilder
+    Plutus.ContextBuilder.V3.TxInfo
 
   build-depends:
     , acc

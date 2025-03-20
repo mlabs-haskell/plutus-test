@@ -1,6 +1,6 @@
 module MintingBuilder (specs) where
 
-import Plutus.ContextBuilder (
+import Plutus.ContextBuilder.V3 (
   MintingBuilder,
   mint,
   tryBuildMinting,

@@ -4,7 +4,7 @@ module SpendingBuilder (specs) where
 
 import Data.Functor.Contravariant (Contravariant (contramap))
 import Optics (view)
-import Plutus.ContextBuilder (
+import Plutus.ContextBuilder.V3 (
   CheckerPos (AtInput),
   SpendingBuilder,
   checkAt,
@@ -17,6 +17,7 @@ import Plutus.ContextBuilder (
   script,
   tryBuildSpending,
   unpack,
+  withDatum,
   withHashDatum,
   withRef,
   withRefIndex,
@@ -26,10 +27,12 @@ import Plutus.ContextBuilder (
   withSpendingOutRefIdx,
   withValue,
  )
-import PlutusLedgerApi.V2 (
+import PlutusLedgerApi.V3 (
   CurrencySymbol (CurrencySymbol),
-  ScriptContext (scriptContextPurpose),
-  ScriptPurpose (Spending),
+  Datum (Datum),
+  ScriptContext (scriptContextScriptInfo),
+  ScriptInfo (SpendingScript),
+  ToData (toBuiltinData),
   TokenName (TokenName),
   TxOutRef (..),
   singleton,
@@ -40,6 +43,9 @@ import Test.Tasty.HUnit (assertFailure, testCase, (@?=))
 
 someOutRef :: TxOutRef
 someOutRef = TxOutRef "abcdee" 71
+
+someDatum :: Datum
+someDatum = Datum $ toBuiltinData (12345 :: Integer)
 
 sample :: SpendingBuilder
 sample =
@@ -79,25 +85,34 @@ specs =
         case tryBuildSpending mempty sample of
           Left _ -> pure ()
           Right _ -> assertFailure "Builder succeed when it should have failed"
-    , testCase "Set input validator identifier with TxOutRef" $
+    , testCase "Set input validator identifier with TxOutRef and without datum" $
         case tryBuildSpending mempty (sample <> withSpendingOutRef someOutRef) of
           Left err -> assertFailure $ "Failed with error : " <> show (P.pretty err)
-          Right (scriptContextPurpose -> Spending outref) -> outref @?= someOutRef
+          Right (scriptContextScriptInfo -> SpendingScript outref datum) -> do
+            outref @?= someOutRef
+            datum @?= Nothing
+          Right _ -> assertFailure "SpendingBuilder built script context that is not spending"
+    , testCase "Set input validator identifier with TxOutRef and with datum" $
+        case tryBuildSpending mempty (sample <> withSpendingOutRef someOutRef <> withDatum someDatum) of
+          Left err -> assertFailure $ "Failed with error : " <> show (P.pretty err)
+          Right (scriptContextScriptInfo -> SpendingScript outref datum) -> do
+            outref @?= someOutRef
+            datum @?= Just someDatum
           Right _ -> assertFailure "SpendingBuilder built script context that is not spending"
     , testCase "Set input validator identifier with TxOutRefId" $
         case tryBuildSpending mempty (sample <> withSpendingOutRefId "abababcc") of
           Left err -> assertFailure $ "Failed with error : " <> show (P.pretty err)
-          Right (scriptContextPurpose -> Spending outref) -> txOutRefId outref @?= "abababcc"
+          Right (scriptContextScriptInfo -> SpendingScript outref _) -> txOutRefId outref @?= "abababcc"
           Right _ -> assertFailure "SpendingBuilder built script context that is not spending"
     , testCase "Set input validator identifier with TxOutRefIdx" $
         case tryBuildSpending mempty (sample <> withSpendingOutRefIdx 19) of
           Left err -> assertFailure $ "Failed with error : " <> show (P.pretty err)
-          Right (scriptContextPurpose -> Spending outref) -> txOutRefIdx outref @?= 19
+          Right (scriptContextScriptInfo -> SpendingScript outref _) -> txOutRefIdx outref @?= 19
           Right _ -> assertFailure "SpendingBuilder built script context that is not spending"
     , testCase "Validator identifier should be override-able" $
         case tryBuildSpending mempty (sample <> withSpendingOutRefIdx 19 <> withSpendingOutRef someOutRef) of
           Left err -> assertFailure $ "Failed with error : " <> show (P.pretty err)
-          Right (scriptContextPurpose -> Spending outref) -> outref @?= someOutRef
+          Right (scriptContextScriptInfo -> SpendingScript outref _) -> outref @?= someOutRef
           Right _ -> assertFailure "SpendingBuilder built script context that is not spending"
     , testCase "Validator identifier should be override-able 2" $
         case tryBuildSpending
@@ -108,7 +123,7 @@ specs =
               <> withSpendingOutRefId "abababcc"
           ) of
           Left err -> assertFailure $ "Failed with error : " <> show (P.pretty err)
-          Right (scriptContextPurpose -> Spending outref) -> txOutRefId outref @?= "abababcc"
+          Right (scriptContextScriptInfo -> SpendingScript outref _) -> txOutRefId outref @?= "abababcc"
           Right _ -> assertFailure "SpendingBuilder built script context that is not spending"
     , testCase "Spending validator input without a redeemer results in an error" $
         case tryBuildSpending

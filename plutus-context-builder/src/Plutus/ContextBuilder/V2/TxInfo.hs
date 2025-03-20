@@ -1,6 +1,6 @@
 {-# LANGUAGE ViewPatterns #-}
 
-{- | Module: Plutus.ContextBuilder.TxInfo
+{- | Module: Plutus.ContextBuilder.V2.TxInfo
  Copyright: (C) Liqwid Labs 2022
  Maintainer: Seungheon Oh <seungheon.ooh@gmail.com>
  Portability: GHC only
@@ -9,7 +9,7 @@
  Builder for TxInfo and other utility functions that generates all
  possible Script Context from TxInfo.
 -}
-module Plutus.ContextBuilder.TxInfo (
+module Plutus.ContextBuilder.V2.TxInfo (
   TxInfoBuilder (..),
   spends,
   mints,
@@ -18,7 +18,7 @@ module Plutus.ContextBuilder.TxInfo (
 
 import Data.Foldable (Foldable (toList))
 import Optics (lens, view)
-import Plutus.ContextBuilder.Base (
+import Plutus.ContextBuilder.V2.Base (
   BaseBuilder,
   Builder (pack, _bb),
   unpack,
@@ -29,7 +29,7 @@ import Plutus.ContextBuilder.Base (
   yieldOutDatums,
   yieldRedeemerMap,
  )
-import Plutus.ContextBuilder.Internal (Normalizer (mkNormalized'), mkNormalized)
+import Plutus.ContextBuilder.V2.Internal (Normalizer (mkNormalized'), mkNormalized)
 import PlutusLedgerApi.V2 (
   ScriptContext (ScriptContext),
   ScriptPurpose (Spending),

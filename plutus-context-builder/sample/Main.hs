@@ -2,7 +2,8 @@ module Main (main) where
 
 import Data.Bifunctor (second)
 import GHC.IO.Encoding (setLocaleEncoding, utf8)
-import Plutus.ContextBuilder (
+import MintingBuilder qualified (specs)
+import Plutus.ContextBuilder.V3 (
   BaseBuilder,
   Builder,
   address,
@@ -31,13 +32,13 @@ import Plutus.ContextBuilder (
  )
 import PlutusLedgerApi.V1 (getValue)
 import PlutusLedgerApi.V1.Value (AssetClass (AssetClass), assetClassValueOf)
-import PlutusLedgerApi.V2 (
+import PlutusLedgerApi.V3 (
   Address (Address),
   Credential (PubKeyCredential),
   CurrencySymbol (CurrencySymbol),
   PubKeyHash (PubKeyHash),
   ScriptContext (scriptContextTxInfo),
-  StakingCredential (StakingHash, StakingPtr),
+  StakingCredential (StakingPtr),
   TokenName (TokenName),
   TxInfo (txInfoOutputs),
   TxOut (txOutValue),
@@ -48,10 +49,7 @@ import PlutusLedgerApi.V2 (
   txInfoWdrl,
  )
 import PlutusTx.AssocMap qualified as AssocMap
-
-import MintingBuilder qualified (specs)
 import SpendingBuilder qualified (specs)
-
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
@@ -121,9 +119,9 @@ main = do
               )
     , testCase
         "adding a withdrawal has the expected behavior when building a Txinfo"
-        $ let stakingCred = StakingHash $ PubKeyCredential "abcd"
-           in txInfoWdrl (buildTxInfo (withdrawal stakingCred 1))
-                @?= AssocMap.unsafeFromList [(stakingCred, 1)]
+        $ let cred = PubKeyCredential "abcd"
+           in txInfoWdrl (buildTxInfo (withdrawal cred 1))
+                @?= AssocMap.unsafeFromList [(cred, 1)]
     ]
   where
     a = buildMinting mempty (mkNormalized $ generalSample <> withMinting (CurrencySymbol "aaaa"))
