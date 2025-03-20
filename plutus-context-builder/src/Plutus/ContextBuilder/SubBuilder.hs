@@ -23,7 +23,7 @@ import Plutus.ContextBuilder.Base (
   yieldInInfoDatums,
  )
 import Plutus.ContextBuilder.Internal (Normalizer (mkNormalized'), mkNormalized)
-import PlutusLedgerApi.V2 (
+import PlutusLedgerApi.V3 (
   Datum,
   DatumHash,
   TxInInfo (TxInInfo),

@@ -31,13 +31,15 @@ import Plutus.ContextBuilder (
  )
 import PlutusLedgerApi.V1 (getValue)
 import PlutusLedgerApi.V1.Value (AssetClass (AssetClass), assetClassValueOf)
-import PlutusLedgerApi.V2 (
+import PlutusLedgerApi.V3 (
   Address (Address),
   Credential (PubKeyCredential),
   CurrencySymbol (CurrencySymbol),
   PubKeyHash (PubKeyHash),
+  Redeemer (Redeemer),
   ScriptContext (scriptContextTxInfo),
-  StakingCredential (StakingHash, StakingPtr),
+  StakingCredential (StakingPtr),
+  ToData (toBuiltinData),
   TokenName (TokenName),
   TxInfo (txInfoOutputs),
   TxOut (txOutValue),
@@ -121,15 +123,16 @@ main = do
               )
     , testCase
         "adding a withdrawal has the expected behavior when building a Txinfo"
-        $ let stakingCred = StakingHash $ PubKeyCredential "abcd"
-           in txInfoWdrl (buildTxInfo (withdrawal stakingCred 1))
-                @?= AssocMap.unsafeFromList [(stakingCred, 1)]
+        $ let cred = PubKeyCredential "abcd"
+           in txInfoWdrl (buildTxInfo (withdrawal cred 1))
+                @?= AssocMap.unsafeFromList [(cred, 1)]
     ]
   where
-    a = buildMinting mempty (mkNormalized $ generalSample <> withMinting (CurrencySymbol "aaaa"))
+    a = buildMinting mempty unitRedeemer (mkNormalized $ generalSample <> withMinting (CurrencySymbol "aaaa"))
     b =
       buildSpending
         mempty
+        unitRedeemer
         ( mkNormalized $
             generalSample
               <> withSpendingUTXO
@@ -144,7 +147,7 @@ main = do
 
     zeroAdaTuple = (adaSymbol, AssocMap.unsafeFromList [(adaToken, 0)])
 
-    adaOutput10000 = buildMinting' $ mkNormalized $ output $ withValue (singleton adaSymbol adaToken 10000)
+    adaOutput10000 = buildMinting' unitRedeemer $ mkNormalized $ output $ withValue (singleton adaSymbol adaToken 10000)
 
 generalSample :: (Monoid a, Builder a) => a
 generalSample =
@@ -175,3 +178,6 @@ nonNormalizedValue =
             , (CurrencySymbol "eeff", [(TokenName "hey", 123)])
             , (CurrencySymbol "ccaa", [(TokenName "hello", 20), (TokenName "b", 2), (TokenName "world", 20)])
             ]
+
+unitRedeemer :: Redeemer
+unitRedeemer = Redeemer $ toBuiltinData ()

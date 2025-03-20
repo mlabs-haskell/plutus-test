@@ -6,7 +6,7 @@ import Plutus.ContextBuilder (
   tryBuildMinting,
   withMinting,
  )
-import PlutusLedgerApi.V2 (CurrencySymbol (CurrencySymbol), TokenName (TokenName), singleton)
+import PlutusLedgerApi.V3 (CurrencySymbol (CurrencySymbol), Redeemer (Redeemer), ToData (toBuiltinData), TokenName (TokenName), singleton)
 import Prettyprinter qualified as P
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
@@ -16,11 +16,11 @@ specs =
   testGroup
     "Minting Builder Unit Tests"
     [ testCase "MintingBuilder succeeds with single input" $
-        case tryBuildMinting mempty $ singleMint <> withMinting (CurrencySymbol "deadbeef") of
+        case tryBuildMinting mempty unitRedeemer $ singleMint <> withMinting (CurrencySymbol "deadbeef") of
           Left err -> assertFailure ("buildingMinting failed with error: " <> show (P.pretty err))
           Right _ -> pure ()
     , testCase "MintingBuilder fails if currency symbol can't be found" $
-        case tryBuildMinting mempty $ singleMint <> withMinting (CurrencySymbol "beefbeef") of
+        case tryBuildMinting mempty unitRedeemer $ singleMint <> withMinting (CurrencySymbol "beefbeef") of
           Left _ -> pure ()
           Right _ ->
             assertFailure
@@ -28,7 +28,7 @@ specs =
                   <> " passed, but it succeeded."
               )
     , testCase "MintingBuilder fails with unspecified currency symbol" $
-        case tryBuildMinting mempty mempty of
+        case tryBuildMinting mempty unitRedeemer mempty of
           Left _ -> pure ()
           Right _ ->
             assertFailure
@@ -36,9 +36,9 @@ specs =
                   <> " but it passed."
               )
     , testCase "MintingBuilder works with either of two Minting CS's" $
-        case tryBuildMinting mempty $ doubleMint <> withMinting (CurrencySymbol "deadbeef") of
+        case tryBuildMinting mempty unitRedeemer $ doubleMint <> withMinting (CurrencySymbol "deadbeef") of
           Left err -> assertFailure ("tryBuildMinting mempty failed with error " <> show (P.pretty err))
-          Right _ -> case tryBuildMinting mempty $ doubleMint <> withMinting (CurrencySymbol "bebe") of
+          Right _ -> case tryBuildMinting mempty unitRedeemer $ doubleMint <> withMinting (CurrencySymbol "bebe") of
             Left err -> assertFailure ("tryBuildMinting mempty failed with error " <> show (P.pretty err))
             Right _ -> pure ()
     ]
@@ -48,3 +48,6 @@ singleMint = mint (singleton (CurrencySymbol "deadbeef") (TokenName "alivecow") 
 
 doubleMint :: MintingBuilder
 doubleMint = singleMint <> mint (singleton (CurrencySymbol "bebe") (TokenName "smallcow") 1)
+
+unitRedeemer :: Redeemer
+unitRedeemer = Redeemer $ toBuiltinData ()

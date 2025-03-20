@@ -11,7 +11,6 @@
 -}
 module Plutus.ContextBuilder.TxInfo (
   TxInfoBuilder (..),
-  spends,
   mints,
   buildTxInfo,
 ) where
@@ -30,10 +29,8 @@ import Plutus.ContextBuilder.Base (
   yieldRedeemerMap,
  )
 import Plutus.ContextBuilder.Internal (Normalizer (mkNormalized'), mkNormalized)
-import PlutusLedgerApi.V2 (
-  ScriptContext (ScriptContext),
-  ScriptPurpose (Spending),
-  TxInInfo (txInInfoOutRef),
+import PlutusLedgerApi.V3 (
+  ScriptContext,
   TxInfo (
     txInfoData,
     txInfoInputs,
@@ -44,7 +41,9 @@ import PlutusLedgerApi.V2 (
     txInfoSignatories,
     txInfoWdrl
   ),
+  getValue,
  )
+import PlutusLedgerApi.V3.MintValue (MintValue (UnsafeMintValue))
 import PlutusTx.AssocMap qualified as AssocMap
 
 {- | Builder that builds TxInfo.
@@ -82,18 +81,12 @@ buildTxInfo (unpack -> builder) =
           , txInfoReferenceInputs = refin
           , txInfoOutputs = outs
           , txInfoData = AssocMap.unsafeFromList $ inDat <> outDat <> extraDat
-          , txInfoMint = mintedValue
+          , txInfoMint = UnsafeMintValue $ getValue mintedValue
           , txInfoSignatories = toList (view #signatures builder)
           , txInfoRedeemers = AssocMap.unsafeFromList $ toList (view #redeemers builder) <> redeemerMap
           , txInfoWdrl = AssocMap.unsafeFromList $ toList (view #withdrawals builder)
           }
    in txinfo
-
-spends :: TxInfo -> [ScriptContext]
-spends txinfo =
-  [ ScriptContext txinfo (Spending . txInInfoOutRef $ ins)
-  | ins <- txInfoInputs txinfo
-  ]
 
 mints :: TxInfo -> [ScriptContext]
 mints _txinfo = undefined

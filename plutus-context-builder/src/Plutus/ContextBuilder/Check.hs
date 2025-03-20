@@ -26,7 +26,6 @@ module Plutus.ContextBuilder.Check (
   checkInputs,
   checkReferenceInputs,
   checkMints,
-  checkFee,
   checkOutputs,
   checkDatumPairs,
   checkPhase1,
@@ -55,7 +54,8 @@ import Plutus.ContextBuilder.Base (
   normalizeValue,
   unpack,
  )
-import PlutusLedgerApi.V2 (
+import PlutusLedgerApi.V1 (lovelaceValue)
+import PlutusLedgerApi.V3 (
   BuiltinByteString,
   Credential (PubKeyCredential, ScriptCredential),
   CurrencySymbol,
@@ -374,8 +374,8 @@ checkZeroSum = Checker $
         i = mconcat . toList $ view #value <$> view #inputs bb
         o = mconcat . toList $ view #value <$> view #outputs bb
         m = foldMap mintToValue . toList . view #mints $ bb
-     in if i <> m /= o <> view #fee bb
-          then basicError $ NoZeroSum (diff (i <> m <> view #fee bb) o)
+     in if i <> m /= o <> lovelaceValue (view #fee bb)
+          then basicError $ NoZeroSum (diff (i <> m <> lovelaceValue (view #fee bb)) o)
           else mempty
 
 {- | Check if all input UTXOs follow format and have TxOutRef.
@@ -454,21 +454,6 @@ checkMints =
         )
         (checkBool $ MintingAda x)
 
-{- | Check if fee amount is valid.
-
- @since 2.1.0
--}
-checkFee :: (Builder a) => Checker e a
-checkFee =
-  checkAt AtFee $
-    contramap (view #fee . unpack) onlyAda
-  where
-    onlyAda :: Checker e Value
-    onlyAda = checkWith $ \x ->
-      contramap
-        (all (\(cs, tk, _) -> cs == adaSymbol && tk == adaToken) . flattenValue)
-        (checkBool $ NonAdaFee x)
-
 {- | Check if all output UTXOs follow format.
 
  @since 2.1.0
@@ -525,7 +510,6 @@ checkPhase1 =
   , checkOutputs
   , checkDatumPairs
   , checkMints
-  , checkFee
   , checkTxId
   , checkZeroSum
   , checkSignatures

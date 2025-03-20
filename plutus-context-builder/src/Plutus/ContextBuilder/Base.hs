@@ -54,7 +54,7 @@ module Plutus.ContextBuilder.Base (
   txId,
   fee,
   timeRange,
-  dcert,
+  txCert,
 
   -- * Builder components
   utxoToTxOut,
@@ -102,17 +102,17 @@ import Optics (
   view,
  )
 import PlutusLedgerApi.V1.Value qualified as Value
-import PlutusLedgerApi.V2 (
+import PlutusLedgerApi.V3 (
   Address (Address, addressCredential, addressStakingCredential),
   BuiltinByteString,
   BuiltinData (BuiltinData),
   Credential (PubKeyCredential, ScriptCredential),
   CurrencySymbol,
-  DCert,
   Data,
   Datum (Datum),
   DatumHash (DatumHash),
   Interval,
+  Lovelace,
   OutputDatum (NoOutputDatum, OutputDatum, OutputDatumHash),
   POSIXTime,
   PubKeyHash (PubKeyHash),
@@ -122,21 +122,26 @@ import PlutusLedgerApi.V2 (
   StakingCredential,
   ToData,
   TokenName,
+  TxCert,
   TxId (TxId),
   TxInInfo (TxInInfo),
   TxInfo (
     TxInfo,
-    txInfoDCert,
+    txInfoCurrentTreasuryAmount,
     txInfoData,
     txInfoFee,
     txInfoId,
     txInfoInputs,
     txInfoMint,
     txInfoOutputs,
+    txInfoProposalProcedures,
     txInfoRedeemers,
     txInfoReferenceInputs,
     txInfoSignatories,
+    txInfoTreasuryDonation,
+    txInfoTxCerts,
     txInfoValidRange,
+    txInfoVotes,
     txInfoWdrl
   ),
   TxOut (TxOut),
@@ -148,6 +153,7 @@ import PlutusLedgerApi.V2 (
   toBuiltin,
   toData,
  )
+import PlutusLedgerApi.V3.MintValue qualified as MintValue
 import PlutusTx.AssocMap (Map)
 import PlutusTx.AssocMap qualified as AssocMap
 
@@ -514,12 +520,12 @@ data BaseBuilder
       (Acc PubKeyHash)
       (Acc Data)
       (Acc Mint)
-      Value
+      Lovelace
       (Interval POSIXTime)
       TxId
       (Acc (ScriptPurpose, Redeemer))
-      (Acc (StakingCredential, Integer))
-      (Acc DCert)
+      (Acc (Credential, Lovelace))
+      (Acc TxCert)
   deriving stock (Show)
 
 -- | @since 2.5.0
@@ -578,7 +584,7 @@ instance
 
 -- | @since 2.5.0
 instance
-  (k ~ A_Lens, a ~ Value, b ~ Value) =>
+  (k ~ A_Lens, a ~ Lovelace, b ~ Lovelace) =>
   LabelOptic "fee" k BaseBuilder BaseBuilder a b
   where
   labelOptic = lens (\(BB _ _ _ _ _ _ x _ _ _ _ _) -> x) $
@@ -618,8 +624,8 @@ instance
 -- | @since 2.5.0
 instance
   ( k ~ A_Lens
-  , a ~ Acc (StakingCredential, Integer)
-  , b ~ Acc (StakingCredential, Integer)
+  , a ~ Acc (Credential, Lovelace)
+  , b ~ Acc (Credential, Lovelace)
   ) =>
   LabelOptic "withdrawals" k BaseBuilder BaseBuilder a b
   where
@@ -629,8 +635,8 @@ instance
 
 -- | @since 2.11.0
 instance
-  (k ~ A_Lens, a ~ Acc DCert, b ~ Acc DCert) =>
-  LabelOptic "dcerts" k BaseBuilder BaseBuilder a b
+  (k ~ A_Lens, a ~ Acc TxCert, b ~ Acc TxCert) =>
+  LabelOptic "txCerts" k BaseBuilder BaseBuilder a b
   where
   labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ _ _ x) -> x) $
     \(BB ins rins outs sigs dats ms f tr txi reds wdrls _) dcerts' ->
@@ -647,7 +653,7 @@ instance Semigroup BaseBuilder where
         (sigs <> sigs')
         (dats <> dats')
         (ms <> ms')
-        (fval <> fval')
+        (fval + fval')
         (choose #timeRange range range')
         (choose #txId tid tid')
         (rs <> rs')
@@ -675,7 +681,7 @@ instance Monoid BaseBuilder where
       mempty
       mempty
       mempty
-      mempty
+      0
       always
       (TxId "")
       mempty
@@ -786,11 +792,11 @@ extraRedeemer p r =
 withdrawal ::
   forall (a :: Type).
   (Builder a) =>
-  StakingCredential ->
-  Integer ->
+  Credential ->
+  Lovelace ->
   a
-withdrawal stakingCred withdrawalAmount =
-  pack . set #withdrawals (pure (stakingCred, withdrawalAmount)) $
+withdrawal cred withdrawalAmount =
+  pack . set #withdrawals (pure (cred, withdrawalAmount)) $
     (mempty :: BaseBuilder)
 
 {- | Specify `TxId` of a script context.
@@ -811,7 +817,7 @@ txId tid = pack . set #txId tid $ (mempty :: BaseBuilder)
 fee ::
   forall (a :: Type).
   (Builder a) =>
-  Value ->
+  Lovelace ->
   a
 fee val = pack . set #fee val $ (mempty :: BaseBuilder)
 
@@ -826,16 +832,16 @@ timeRange ::
   a
 timeRange r = pack . set #timeRange r $ (mempty :: BaseBuilder)
 
-{- | Specify a 'DCert' to be included in the transaction.
+{- | Specify a 'TxCert' to be included in the transaction.
 
  @since 2.11.0
 -}
-dcert ::
+txCert ::
   forall (a :: Type).
   (Builder a) =>
-  DCert ->
+  TxCert ->
   a
-dcert d = pack . set #dcerts (pure d) $ (mempty :: BaseBuilder)
+txCert d = pack . set #txCerts (pure d) $ (mempty :: BaseBuilder)
 
 {- | Specify an output of a script context.
 
@@ -939,14 +945,18 @@ yieldBaseTxInfo b = case unpack b of
       , txInfoReferenceInputs = mempty
       , txInfoOutputs = mempty
       , txInfoFee = view #fee bb
-      , txInfoMint = mempty
-      , txInfoDCert = mempty
+      , txInfoMint = MintValue.emptyMintValue
+      , txInfoTxCerts = mempty
       , txInfoWdrl = AssocMap.unsafeFromList []
       , txInfoValidRange = view #timeRange bb
       , txInfoSignatories = mempty
       , txInfoRedeemers = AssocMap.unsafeFromList []
       , txInfoData = AssocMap.unsafeFromList []
       , txInfoId = view #txId bb
+      , txInfoVotes = AssocMap.unsafeFromList []
+      , txInfoProposalProcedures = mempty
+      , txInfoCurrentTreasuryAmount = Nothing
+      , txInfoTreasuryDonation = Nothing
       }
 
 {- | Provide total mints to Continuation Monad.
@@ -1191,7 +1201,7 @@ mkNormalizedBase = over _bb go
         . over #referenceInputs (fmap normalizeUTXO)
         . over #outputs (fmap normalizeUTXO)
         . over #mints (fmap normalizeMint)
-        . over #dcerts (fromList . nub . sort . toList)
+        . over #txCerts (fromList . nub . sort . toList)
 
 hashBlake2b_256 :: ByteString -> BuiltinByteString
 hashBlake2b_256 = toBuiltin . convert @_ @ByteString . hashWith Blake2b_256

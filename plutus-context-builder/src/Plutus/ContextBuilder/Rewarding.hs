@@ -38,13 +38,12 @@ import Plutus.ContextBuilder.Base (
   yieldRedeemerMap,
  )
 import Plutus.ContextBuilder.Internal (Normalizer (mkNormalized'), mkNormalized)
-import PlutusLedgerApi.V2 (
+import PlutusLedgerApi.V3 (
   Credential (PubKeyCredential),
+  Redeemer,
   ScriptContext (ScriptContext),
-  ScriptPurpose (Rewarding),
-  StakingCredential (StakingHash),
+  ScriptInfo (RewardingScript),
   TxInfo (
-    txInfoDCert,
     txInfoData,
     txInfoInputs,
     txInfoMint,
@@ -52,9 +51,12 @@ import PlutusLedgerApi.V2 (
     txInfoRedeemers,
     txInfoReferenceInputs,
     txInfoSignatories,
+    txInfoTxCerts,
     txInfoWdrl
   ),
+  Value (getValue),
  )
+import PlutusLedgerApi.V3.MintValue (MintValue (UnsafeMintValue))
 import PlutusTx.AssocMap qualified as AssocMap
 
 {- | A context builder for Rewarding. Corresponds to
@@ -62,7 +64,7 @@ import PlutusTx.AssocMap qualified as AssocMap
 
  @since 2.8.0
 -}
-data RewardingBuilder = RB BaseBuilder (Maybe StakingCredential)
+data RewardingBuilder = RB BaseBuilder (Maybe Credential)
   deriving stock
     ( -- | @since 2.8.0
       Show
@@ -77,7 +79,7 @@ instance
 
 -- | @since 2.8.0
 instance
-  (k ~ A_Lens, a ~ Maybe StakingCredential, b ~ Maybe StakingCredential) =>
+  (k ~ A_Lens, a ~ Maybe Credential, b ~ Maybe Credential) =>
   LabelOptic "rewardingCred" k RewardingBuilder RewardingBuilder a b
   where
   labelOptic = lens (\(RB _ x) -> x) $ \(RB inner _) cs' -> RB inner cs'
@@ -107,7 +109,7 @@ instance Normalizer RewardingBuilder where
 
  @since 2.8.0
 -}
-withRewarding :: StakingCredential -> RewardingBuilder
+withRewarding :: Credential -> RewardingBuilder
 withRewarding sc = RB mempty $ Just sc
 
 {- | Builds @ScriptContext@ according to given configuration and
@@ -116,9 +118,10 @@ withRewarding sc = RB mempty $ Just sc
  @since 2.8.0
 -}
 buildRewarding' ::
+  Redeemer ->
   RewardingBuilder ->
   ScriptContext
-buildRewarding' builder@(unpack -> bb) =
+buildRewarding' redeemer builder@(unpack -> bb) =
   let (ins, inDat) = yieldInInfoDatums . view #inputs $ bb
       (refin, _) = yieldInInfoDatums . view #referenceInputs $ bb
       (outs, outDat) = yieldOutDatums . view #outputs $ bb
@@ -132,13 +135,13 @@ buildRewarding' builder@(unpack -> bb) =
           , txInfoReferenceInputs = refin
           , txInfoOutputs = outs
           , txInfoData = AssocMap.unsafeFromList $ inDat <> outDat <> extraDat
-          , txInfoMint = mintedValue
+          , txInfoMint = UnsafeMintValue $ getValue mintedValue
           , txInfoRedeemers = AssocMap.unsafeFromList $ toList (view #redeemers bb) <> redeemerMap
           , txInfoSignatories = toList . view #signatures $ bb
           , txInfoWdrl = AssocMap.unsafeFromList $ toList (view #withdrawals bb)
-          , txInfoDCert = toList (view #dcerts bb)
+          , txInfoTxCerts = toList (view #txCerts bb)
           }
       rewardCred = case view #rewardingCred builder of
-        Just cred -> Rewarding cred
-        Nothing -> Rewarding . StakingHash . PubKeyCredential $ ""
-   in ScriptContext txinfo rewardCred
+        Just cred -> RewardingScript cred
+        Nothing -> RewardingScript . PubKeyCredential $ ""
+   in ScriptContext txinfo redeemer rewardCred

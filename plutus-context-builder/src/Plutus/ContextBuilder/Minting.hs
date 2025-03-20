@@ -55,12 +55,12 @@ import Plutus.ContextBuilder.Check (
   runChecker,
  )
 import Plutus.ContextBuilder.Internal (Normalizer (mkNormalized'), mkNormalized)
-import PlutusLedgerApi.V2 (
+import PlutusLedgerApi.V3 (
   CurrencySymbol,
+  Redeemer,
   ScriptContext (ScriptContext),
-  ScriptPurpose (Minting),
+  ScriptInfo (MintingScript),
   TxInfo (
-    txInfoDCert,
     txInfoData,
     txInfoInputs,
     txInfoMint,
@@ -68,11 +68,14 @@ import PlutusLedgerApi.V2 (
     txInfoRedeemers,
     txInfoReferenceInputs,
     txInfoSignatories,
+    txInfoTxCerts,
     txInfoWdrl
   ),
   Value,
   adaSymbol,
+  getValue,
  )
+import PlutusLedgerApi.V3.MintValue (MintValue (UnsafeMintValue))
 import PlutusTx.AssocMap qualified as AssocMap
 import Prettyprinter qualified as P (Pretty (pretty))
 
@@ -134,9 +137,10 @@ withMinting cs = MB mempty $ Just cs
  @since 2.1.0
 -}
 buildMinting' ::
+  Redeemer ->
   MintingBuilder ->
   ScriptContext
-buildMinting' builder@(unpack -> bb) =
+buildMinting' redeemer builder@(unpack -> bb) =
   let (ins, inDat) = yieldInInfoDatums . view #inputs $ bb
       (refin, _) = yieldInInfoDatums . view #referenceInputs $ bb
       (outs, outDat) = yieldOutDatums . view #outputs $ bb
@@ -150,34 +154,34 @@ buildMinting' builder@(unpack -> bb) =
           , txInfoReferenceInputs = refin
           , txInfoOutputs = outs
           , txInfoData = AssocMap.unsafeFromList $ inDat <> outDat <> extraDat
-          , txInfoMint = mintedValue
+          , txInfoMint = UnsafeMintValue $ getValue mintedValue
           , txInfoRedeemers = AssocMap.unsafeFromList $ toList (view #redeemers bb) <> redeemerMap
           , txInfoSignatories = toList . view #signatures $ bb
           , txInfoWdrl = AssocMap.unsafeFromList $ toList (view #withdrawals bb)
-          , txInfoDCert = toList (view #dcerts bb)
+          , txInfoTxCerts = toList (view #txCerts bb)
           }
       mintcs = case view #mintingCS builder of
         Just cs ->
           if hasCS mintedValue cs
-            then Minting cs
-            else Minting adaSymbol
-        Nothing -> Minting adaSymbol
-   in ScriptContext txinfo mintcs
+            then MintingScript cs
+            else MintingScript adaSymbol
+        Nothing -> MintingScript adaSymbol
+   in ScriptContext txinfo redeemer mintcs
 
 {- | Check builder with provided checker, then build minting context.
 
  @since 2.1.0
 -}
-buildMinting :: [Checker MintingError MintingBuilder] -> MintingBuilder -> ScriptContext
-buildMinting c = buildMinting' . handleErrors (mconcat c <> checkMinting)
+buildMinting :: [Checker MintingError MintingBuilder] -> Redeemer -> MintingBuilder -> ScriptContext
+buildMinting c redeemer = buildMinting' redeemer . handleErrors (mconcat c <> checkMinting)
 
 {- | Same as `buildMinting` but instead of throwing error it returns `Either`.
 
  @since 2.1.0
 -}
-tryBuildMinting :: Checker MintingError MintingBuilder -> MintingBuilder -> Either [CheckerError MintingError] ScriptContext
-tryBuildMinting c b = case toList $ runChecker (c <> checkMinting) b of
-  [] -> Right $ buildMinting' b
+tryBuildMinting :: Checker MintingError MintingBuilder -> Redeemer -> MintingBuilder -> Either [CheckerError MintingError] ScriptContext
+tryBuildMinting c redeemer b = case toList $ runChecker (c <> checkMinting) b of
+  [] -> Right $ buildMinting' redeemer b
   errs -> Left errs
 
 -- | @since 2.1.0

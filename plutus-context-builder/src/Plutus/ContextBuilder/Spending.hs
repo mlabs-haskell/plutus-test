@@ -52,13 +52,14 @@ import Plutus.ContextBuilder.Base (
  )
 import Plutus.ContextBuilder.Check
 import Plutus.ContextBuilder.Internal (Normalizer (mkNormalized'), mkNormalized)
-import PlutusLedgerApi.V2 (
+import PlutusLedgerApi.V3 (
+  OutputDatum (NoOutputDatum, OutputDatum, OutputDatumHash),
+  Redeemer,
   ScriptContext (ScriptContext),
-  ScriptPurpose (Spending),
+  ScriptInfo (SpendingScript),
   TxId,
   TxInInfo (txInInfoOutRef, txInInfoResolved),
   TxInfo (
-    txInfoDCert,
     txInfoData,
     txInfoInputs,
     txInfoMint,
@@ -66,10 +67,14 @@ import PlutusLedgerApi.V2 (
     txInfoRedeemers,
     txInfoReferenceInputs,
     txInfoSignatories,
+    txInfoTxCerts,
     txInfoWdrl
   ),
-  TxOutRef (..),
+  TxOut (txOutDatum),
+  TxOutRef (TxOutRef, txOutRefId, txOutRefIdx),
+  Value (getValue),
  )
+import PlutusLedgerApi.V3.MintValue (MintValue (UnsafeMintValue))
 import PlutusTx.AssocMap qualified as AssocMap
 import Prettyprinter qualified as P
 
@@ -179,18 +184,18 @@ withSpendingOutRefIdx tidx =
 yieldValidatorInput ::
   [TxInInfo] ->
   ValidatorInputIdentifier ->
-  Maybe TxOutRef
+  Maybe (TxOutRef, OutputDatum)
 yieldValidatorInput ins = \case
   ValidatorUTXO utxo -> go txInInfoResolved (utxoToTxOut utxo)
   ValidatorOutRef outref -> go txInInfoOutRef outref
   ValidatorOutRefId tid -> go (txOutRefId . txInInfoOutRef) tid
   ValidatorOutRefIdx tidx -> go (txOutRefIdx . txInInfoOutRef) tidx
   where
-    go :: (Eq b) => (TxInInfo -> b) -> b -> Maybe TxOutRef
+    go :: (Eq b) => (TxInInfo -> b) -> b -> Maybe (TxOutRef, OutputDatum)
     go f x =
       case filter (\(f -> y) -> y == x) ins of
         [] -> Nothing
-        (r : _) -> return $ txInInfoOutRef r
+        (r : _) -> pure (txInInfoOutRef r, txOutDatum $ txInInfoResolved r)
 
 {- | Builds @ScriptContext@ according to given configuration and
  @SpendingBuilder@.
@@ -198,9 +203,10 @@ yieldValidatorInput ins = \case
  @since 2.1.0
 -}
 buildSpending' ::
+  Redeemer ->
   SpendingBuilder ->
   ScriptContext
-buildSpending' builder@(unpack -> bb) =
+buildSpending' redeemer builder@(unpack -> bb) =
   let (ins, inDat) = yieldInInfoDatums . view #inputs $ bb
       (refin, _) = yieldInInfoDatums . view #referenceInputs $ bb
       (outs, outDat) = yieldOutDatums . view #outputs $ bb
@@ -214,31 +220,35 @@ buildSpending' builder@(unpack -> bb) =
           , txInfoReferenceInputs = refin
           , txInfoOutputs = outs
           , txInfoData = AssocMap.unsafeFromList $ inDat <> outDat <> extraDat
-          , txInfoMint = mintedValue
+          , txInfoMint = UnsafeMintValue $ getValue mintedValue
           , txInfoSignatories = toList . view #signatures $ bb
           , txInfoRedeemers = AssocMap.unsafeFromList $ toList (view #redeemers bb) <> redeemerMap
           , txInfoWdrl = AssocMap.unsafeFromList $ toList (view #withdrawals bb)
-          , txInfoDCert = toList (view #dcerts bb)
+          , txInfoTxCerts = toList (view #txCerts bb)
           }
-      vInRef = case view #validatorInput builder >>= yieldValidatorInput ins of
-        Nothing -> TxOutRef "" 0
-        Just ref -> ref
-   in ScriptContext txinfo (Spending vInRef)
+      spending = case view #validatorInput builder >>= yieldValidatorInput ins of
+        Nothing -> SpendingScript (TxOutRef "" 0) Nothing
+        Just (ref, datum) -> SpendingScript ref $
+          case datum of
+            NoOutputDatum -> Nothing
+            OutputDatumHash hash -> AssocMap.lookup hash $ txInfoData txinfo
+            OutputDatum datum' -> Just datum'
+   in ScriptContext txinfo redeemer spending
 
 {- | Check builder with provided checker, then build spending context.
 
  @since 2.1.0
 -}
-buildSpending :: [Checker SpendingError SpendingBuilder] -> SpendingBuilder -> ScriptContext
-buildSpending c = buildSpending' . handleErrors (mconcat c <> checkSpending)
+buildSpending :: [Checker SpendingError SpendingBuilder] -> Redeemer -> SpendingBuilder -> ScriptContext
+buildSpending c redeemer = buildSpending' redeemer . handleErrors (mconcat c <> checkSpending)
 
 {- | Same as `buildSpending` but instead of throwing error it returns `Either`.
 
  @since 2.1.0
 -}
-tryBuildSpending :: Checker SpendingError SpendingBuilder -> SpendingBuilder -> Either [CheckerError SpendingError] ScriptContext
-tryBuildSpending c b = case toList $ runChecker (c <> checkSpending) b of
-  [] -> Right $ buildSpending' b
+tryBuildSpending :: Checker SpendingError SpendingBuilder -> Redeemer -> SpendingBuilder -> Either [CheckerError SpendingError] ScriptContext
+tryBuildSpending c redeemer b = case toList $ runChecker (c <> checkSpending) b of
+  [] -> Right $ buildSpending' redeemer b
   errs -> Left errs
 
 -- | @since 2.1.0

@@ -24,7 +24,7 @@ module Plutus.ContextBuilder.Certifying (
   buildCertifying',
 ) where
 
-import Data.Foldable (Foldable (toList))
+import Data.Foldable (Foldable (toList), find)
 import Optics (A_Lens, LabelOptic (labelOptic), lens, set, view)
 import Plutus.ContextBuilder.Base (
   BaseBuilder,
@@ -38,12 +38,13 @@ import Plutus.ContextBuilder.Base (
   yieldRedeemerMap,
  )
 import Plutus.ContextBuilder.Internal (Normalizer (mkNormalized'), mkNormalized)
-import PlutusLedgerApi.V2 (
-  DCert (DCertGenesis),
+import PlutusLedgerApi.V3 (
+  Credential (PubKeyCredential),
+  Redeemer,
   ScriptContext (ScriptContext),
-  ScriptPurpose (Certifying),
+  ScriptInfo (CertifyingScript),
+  TxCert (TxCertRegStaking),
   TxInfo (
-    txInfoDCert,
     txInfoData,
     txInfoInputs,
     txInfoMint,
@@ -51,9 +52,12 @@ import PlutusLedgerApi.V2 (
     txInfoRedeemers,
     txInfoReferenceInputs,
     txInfoSignatories,
+    txInfoTxCerts,
     txInfoWdrl
   ),
+  Value (getValue),
  )
+import PlutusLedgerApi.V3.MintValue (MintValue (UnsafeMintValue))
 import PlutusTx.AssocMap qualified as AssocMap
 
 {- | A context builder for Certifying. Corresponds to
@@ -61,7 +65,7 @@ import PlutusTx.AssocMap qualified as AssocMap
 
  @since 2.8.0
 -}
-data CertifyingBuilder = CB BaseBuilder (Maybe DCert)
+data CertifyingBuilder = CB BaseBuilder (Maybe TxCert)
   deriving stock
     ( -- | @since 2.8.0
       Show
@@ -76,8 +80,8 @@ instance
 
 -- | @since 2.8.0
 instance
-  (k ~ A_Lens, a ~ Maybe DCert, b ~ Maybe DCert) =>
-  LabelOptic "certifyingDCert" k CertifyingBuilder CertifyingBuilder a b
+  (k ~ A_Lens, a ~ Maybe TxCert, b ~ Maybe TxCert) =>
+  LabelOptic "certifyingTxCert" k CertifyingBuilder CertifyingBuilder a b
   where
   labelOptic = lens (\(CB _ x) -> x) $ \(CB inner _) cs' -> CB inner cs'
 
@@ -106,7 +110,7 @@ instance Normalizer CertifyingBuilder where
 
  @since 2.8.0
 -}
-withCertifying :: DCert -> CertifyingBuilder
+withCertifying :: TxCert -> CertifyingBuilder
 withCertifying sc = CB mempty $ Just sc
 
 {- | Builds @ScriptContext@ according to given configuration and
@@ -115,9 +119,10 @@ withCertifying sc = CB mempty $ Just sc
  @since 2.8.0
 -}
 buildCertifying' ::
+  Redeemer ->
   CertifyingBuilder ->
   ScriptContext
-buildCertifying' builder@(unpack -> bb) =
+buildCertifying' redeemer builder@(unpack -> bb) =
   let (ins, inDat) = yieldInInfoDatums . view #inputs $ bb
       (refin, _) = yieldInInfoDatums . view #referenceInputs $ bb
       (outs, outDat) = yieldOutDatums . view #outputs $ bb
@@ -131,13 +136,13 @@ buildCertifying' builder@(unpack -> bb) =
           , txInfoReferenceInputs = refin
           , txInfoOutputs = outs
           , txInfoData = AssocMap.unsafeFromList $ inDat <> outDat <> extraDat
-          , txInfoMint = mintedValue
+          , txInfoMint = UnsafeMintValue $ getValue mintedValue
           , txInfoRedeemers = AssocMap.unsafeFromList $ toList (view #redeemers bb) <> redeemerMap
           , txInfoSignatories = toList . view #signatures $ bb
           , txInfoWdrl = AssocMap.unsafeFromList $ toList (view #withdrawals bb)
-          , txInfoDCert = toList (view #dcerts bb)
+          , txInfoTxCerts = toList (view #txCerts bb)
           }
-      rewardCred = case view #certifyingDCert builder of
-        Just dcert -> Certifying dcert
-        Nothing -> Certifying DCertGenesis
-   in ScriptContext txinfo rewardCred
+      scriptInfo = case view #certifyingTxCert builder of
+        Just txCert -> CertifyingScript (maybe 0 fst $ find ((== txCert) . snd) . zip [0 ..] $ txInfoTxCerts txinfo) txCert
+        Nothing -> CertifyingScript 0 (TxCertRegStaking (PubKeyCredential "") Nothing)
+   in ScriptContext txinfo redeemer scriptInfo
