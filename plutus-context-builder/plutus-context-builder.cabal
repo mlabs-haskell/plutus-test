@@ -91,6 +91,7 @@ library
   other-modules:
     Plutus.ContextBuilder.Base
     Plutus.ContextBuilder.Certifying
+    Plutus.ContextBuilder.Voting
     Plutus.ContextBuilder.Check
     Plutus.ContextBuilder.Internal
     Plutus.ContextBuilder.Minting
