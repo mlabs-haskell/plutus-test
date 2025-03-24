@@ -5,13 +5,16 @@
 
 {- | Module: Plutus.ContextBuilder.Minting
  Copyright: (C) Liqwid Labs 2022
- Maintainer: Koz Ross <koz@mlabs.city>
+ Copyright: (C) MLabs 2025
+ Maintainer: Tomasz Maciosowski <tomasz@mlabs.city>
  Portability: GHC only
  Stability: Experimental
 
  Builder for minting contexts. 'MintingBuilder' is an instance of 'Semigroup',
  which allows combining the results of this API's functions into a larger
  'MintingBuilder' using '<>'.
+
+ @since 4.0.0
 -}
 module Plutus.ContextBuilder.Minting (
   -- * Types
@@ -31,6 +34,8 @@ import Control.Arrow ((&&&))
 import Data.Foldable (Foldable (toList))
 import Data.Functor.Contravariant (contramap)
 import Data.Functor.Contravariant.Divisible (choose)
+import Data.Maybe (fromMaybe)
+import Data.Monoid (Last (getLast))
 import Optics (A_Lens, LabelOptic (labelOptic), lens, set, view)
 import Plutus.ContextBuilder.Base (
   BaseBuilder,
@@ -38,11 +43,7 @@ import Plutus.ContextBuilder.Base (
   mintToValue,
   unpack,
   yieldBaseTxInfo,
-  yieldExtraDatums,
-  yieldInInfoDatums,
   yieldMint,
-  yieldOutDatums,
-  yieldRedeemerMap,
  )
 import Plutus.ContextBuilder.Check (
   Checker,
@@ -57,65 +58,52 @@ import Plutus.ContextBuilder.Check (
 import Plutus.ContextBuilder.Internal (Normalizer (mkNormalized'), mkNormalized)
 import PlutusLedgerApi.V3 (
   CurrencySymbol,
-  Redeemer,
+  Redeemer (Redeemer),
   ScriptContext (ScriptContext),
   ScriptInfo (MintingScript),
-  TxInfo (
-    txInfoData,
-    txInfoInputs,
-    txInfoMint,
-    txInfoOutputs,
-    txInfoRedeemers,
-    txInfoReferenceInputs,
-    txInfoSignatories,
-    txInfoTxCerts,
-    txInfoWdrl
-  ),
+  ToData (toBuiltinData),
   Value,
   adaSymbol,
-  getValue,
  )
-import PlutusLedgerApi.V3.MintValue (MintValue (UnsafeMintValue))
-import PlutusTx.AssocMap qualified as AssocMap
 import Prettyprinter qualified as P (Pretty (pretty))
 
 {- | A context builder for Minting. Corresponds to
  'Plutus.V1.Ledger.Contexts.Minting' specifically.
 
- @since 2.5.0
+ @since 4.0.0
 -}
 data MintingBuilder = MB BaseBuilder (Maybe CurrencySymbol)
   deriving stock
-    ( -- | @since 1.0.0
+    ( -- | @since 4.0.0
       Show
     )
 
--- | @since 2.5.0
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ BaseBuilder, b ~ BaseBuilder) =>
   LabelOptic "inner" k MintingBuilder MintingBuilder a b
   where
   labelOptic = lens (\(MB x _) -> x) $ \(MB _ cs) inner' -> MB inner' cs
 
--- | @since 2.5.0
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Maybe CurrencySymbol, b ~ Maybe CurrencySymbol) =>
   LabelOptic "mintingCS" k MintingBuilder MintingBuilder a b
   where
   labelOptic = lens (\(MB _ x) -> x) $ \(MB inner _) cs' -> MB inner cs'
 
--- | @since 1.1.0
+-- | @since 4.0.0
 instance Semigroup MintingBuilder where
   MB inner _ <> MB inner' cs@(Just _) =
     MB (inner <> inner') cs
   MB inner cs <> MB inner' Nothing =
     MB (inner <> inner') cs
 
--- | @since 1.1.0
+-- | @since 4.0.0
 instance Monoid MintingBuilder where
   mempty = MB mempty Nothing
 
--- | @since 1.1.0
+-- | @since 4.0.0
 instance Builder MintingBuilder where
   _bb = #inner
   pack x = set #inner x (mempty :: MintingBuilder)
@@ -126,7 +114,7 @@ instance Normalizer MintingBuilder where
 
 {- | Set CurrencySymbol for building Minting ScriptContext.
 
- @since 1.1.1
+ @since 4.0.0
 -}
 withMinting :: CurrencySymbol -> MintingBuilder
 withMinting cs = MB mempty $ Just cs
@@ -134,32 +122,13 @@ withMinting cs = MB mempty $ Just cs
 {- | Builds @ScriptContext@ according to given configuration and
  @MintingBuilder@.
 
- @since 2.1.0
+ @since 4.0.0
 -}
-buildMinting' ::
-  Redeemer ->
-  MintingBuilder ->
-  ScriptContext
-buildMinting' redeemer builder@(unpack -> bb) =
-  let (ins, inDat) = yieldInInfoDatums . view #inputs $ bb
-      (refin, _) = yieldInInfoDatums . view #referenceInputs $ bb
-      (outs, outDat) = yieldOutDatums . view #outputs $ bb
-      mintedValue = yieldMint . view #mints $ bb
-      extraDat = yieldExtraDatums . view #datums $ bb
-      base = yieldBaseTxInfo builder
-      redeemerMap = yieldRedeemerMap (view #inputs bb) (view #mints bb)
-      txinfo =
-        base
-          { txInfoInputs = ins
-          , txInfoReferenceInputs = refin
-          , txInfoOutputs = outs
-          , txInfoData = AssocMap.unsafeFromList $ inDat <> outDat <> extraDat
-          , txInfoMint = UnsafeMintValue $ getValue mintedValue
-          , txInfoRedeemers = AssocMap.unsafeFromList $ toList (view #redeemers bb) <> redeemerMap
-          , txInfoSignatories = toList . view #signatures $ bb
-          , txInfoWdrl = AssocMap.unsafeFromList $ toList (view #withdrawals bb)
-          , txInfoTxCerts = toList (view #txCerts bb)
-          }
+buildMinting' :: MintingBuilder -> ScriptContext
+buildMinting' builder@(unpack -> bb) =
+  let mintedValue = yieldMint . view #mints $ bb
+      txinfo = yieldBaseTxInfo builder
+      redeemer = fromMaybe (Redeemer $ toBuiltinData ()) $ getLast $ view #redeemer bb
       mintcs = case view #mintingCS builder of
         Just cs ->
           if hasCS mintedValue cs
@@ -170,32 +139,32 @@ buildMinting' redeemer builder@(unpack -> bb) =
 
 {- | Check builder with provided checker, then build minting context.
 
- @since 2.1.0
+ @since 4.0.0
 -}
-buildMinting :: [Checker MintingError MintingBuilder] -> Redeemer -> MintingBuilder -> ScriptContext
-buildMinting c redeemer = buildMinting' redeemer . handleErrors (mconcat c <> checkMinting)
+buildMinting :: [Checker MintingError MintingBuilder] -> MintingBuilder -> ScriptContext
+buildMinting c = buildMinting' . handleErrors (mconcat c <> checkMinting)
 
 {- | Same as `buildMinting` but instead of throwing error it returns `Either`.
 
- @since 2.1.0
+ @since 4.0.0
 -}
-tryBuildMinting :: Checker MintingError MintingBuilder -> Redeemer -> MintingBuilder -> Either [CheckerError MintingError] ScriptContext
-tryBuildMinting c redeemer b = case toList $ runChecker (c <> checkMinting) b of
-  [] -> Right $ buildMinting' redeemer b
+tryBuildMinting :: Checker MintingError MintingBuilder -> MintingBuilder -> Either [CheckerError MintingError] ScriptContext
+tryBuildMinting c b = case toList $ runChecker (c <> checkMinting) b of
+  [] -> Right $ buildMinting' b
   errs -> Left errs
 
--- | @since 2.1.0
+-- | @since 4.0.0
 data MintingError
   = MintingCurrencySymbolNotGiven
   | MintingCurrencySymbolNotFound
   deriving stock (Show)
 
--- | @since 2.1.0
+-- | @since 4.0.0
 instance P.Pretty MintingError where
   pretty MintingCurrencySymbolNotGiven = "Minting Currency Symbol is not given"
   pretty MintingCurrencySymbolNotFound = "Specified Currency Symbol is not found on mints"
 
--- | @since 2.1.0
+-- | @since 4.0.0
 checkMinting :: Checker MintingError MintingBuilder
 checkMinting =
   contramap

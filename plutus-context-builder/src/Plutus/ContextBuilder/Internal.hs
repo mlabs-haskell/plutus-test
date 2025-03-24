@@ -14,7 +14,7 @@ instance Normalizer BaseBuilder where
 
 {- | Normalizes every value present in the builder structure.
 
- @since 2.4.0
+ @since 4.0.0
 -}
 mkNormalized :: (Normalizer a) => a -> a
 mkNormalized = mkNormalized'

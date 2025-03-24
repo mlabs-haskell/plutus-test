@@ -36,10 +36,8 @@ import PlutusLedgerApi.V3 (
   Credential (PubKeyCredential),
   CurrencySymbol (CurrencySymbol),
   PubKeyHash (PubKeyHash),
-  Redeemer (Redeemer),
   ScriptContext (scriptContextTxInfo),
   StakingCredential (StakingPtr),
-  ToData (toBuiltinData),
   TokenName (TokenName),
   TxInfo (txInfoOutputs),
   TxOut (txOutValue),
@@ -128,11 +126,10 @@ main = do
                 @?= AssocMap.unsafeFromList [(cred, 1)]
     ]
   where
-    a = buildMinting mempty unitRedeemer (mkNormalized $ generalSample <> withMinting (CurrencySymbol "aaaa"))
+    a = buildMinting mempty (mkNormalized $ generalSample <> withMinting (CurrencySymbol "aaaa"))
     b =
       buildSpending
         mempty
-        unitRedeemer
         ( mkNormalized $
             generalSample
               <> withSpendingUTXO
@@ -147,7 +144,7 @@ main = do
 
     zeroAdaTuple = (adaSymbol, AssocMap.unsafeFromList [(adaToken, 0)])
 
-    adaOutput10000 = buildMinting' unitRedeemer $ mkNormalized $ output $ withValue (singleton adaSymbol adaToken 10000)
+    adaOutput10000 = buildMinting' $ mkNormalized $ output $ withValue (singleton adaSymbol adaToken 10000)
 
 generalSample :: (Monoid a, Builder a) => a
 generalSample =
@@ -178,6 +175,3 @@ nonNormalizedValue =
             , (CurrencySymbol "eeff", [(TokenName "hey", 123)])
             , (CurrencySymbol "ccaa", [(TokenName "hello", 20), (TokenName "b", 2), (TokenName "world", 20)])
             ]
-
-unitRedeemer :: Redeemer
-unitRedeemer = Redeemer $ toBuiltinData ()
