@@ -1,5 +1,15 @@
 # Revision history for `plutarch-unit`
 
+## 2.0.0 -- 2025-03-24
+
+### Modified
+
+* Decoupled API from plutarch terms to operate on raw `Script`s
+
+### Deleted
+
+* `Plutarch.Test.Export`
+
 ## 1.2.1 -- 2022-11-08
 
 ### Added

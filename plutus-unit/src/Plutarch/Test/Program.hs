@@ -1,8 +1,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-{- | Tasty provider for testing 'ScriptCase'.
+{- | Module: Plutarch.Test.Program
+ Copyright: (C) Liqwid Labs 2022
+ Copyright: (C) MLabs 2025
+ Maintainer: Tomasz Maciosowski <tomasz@mlabs.city>
 
- @since 1.3
+ Tasty provider for testing 'ScriptCase'.
+
+@since 2.0
 -}
 module Plutarch.Test.Program (
   -- * High level
@@ -43,54 +48,54 @@ import Test.Tasty (testGroup)
 
 --------------------------------------------------------------------------------
 
--- | @since 1.3
+-- | @since 2.0
 data ScriptResult
-  = -- | @since 1.3
+  = -- | @since 2.0
     ScriptSuccess
-  | -- | @since 1.3
+  | -- | @since 2.0
     ScriptFailure
   deriving stock
-    ( -- | @since 1.3
+    ( -- | @since 2.0
       Eq
-    , -- | @since 1.3
+    , -- | @since 2.0
       Show
     )
 
 {- | Full script info for testing.
 
- @since 1.3
+@since 2.0
 -}
 data ScriptCase = ScriptCase
   { name :: String
   -- ^ The name.
   --
-  -- @since 1.3
+  -- @since 2.0
   , expectation :: ScriptResult
   -- ^ The expectation.
   --
-  -- @since 1.3
+  -- @since 2.0
   , script :: UPLC.Program UPLC.DeBruijn UPLC.DefaultUni UPLC.DefaultFun ()
   -- ^ The script.
   --
-  -- @since 1.3
+  -- @since 2.0
   , debugScript :: UPLC.Program UPLC.DeBruijn UPLC.DefaultUni UPLC.DefaultFun ()
   -- ^ Debug version of the script for .
   --
-  -- @since 1.3
+  -- @since 2.0
   }
   deriving stock
-    ( -- | @since 1.3
+    ( -- | @since 2.0
       Eq
-    , -- | @since 1.3
+    , -- | @since 2.0
       Generic
-    , -- | @since 1.3
+    , -- | @since 2.0
       Show
     )
 
--- | @since 1.3
+-- | @since 2.0
 makeFieldLabelsNoPrefix ''ScriptCase
 
--- | @since 1.3
+-- | @since 2.0
 instance IsTest ScriptCase where
   testOptions = Tagged []
   run _options sc _progress = do
@@ -103,21 +108,21 @@ instance IsTest ScriptCase where
 
 {- | Turns a 'ScriptCase' into a 'TestTree' using its 'name'.
 
- @since 1.3
+@since 2.0
 -}
 testScript :: ScriptCase -> TestTree
 testScript sc = singleTest (view #name sc) sc
 
 {- | 'testGroup' but for 'ScriptCase'.
 
- @since 1.3
+@since 2.0
 -}
 testScriptGroup :: String -> [ScriptCase] -> TestTree
 testScriptGroup desc scs = testGroup desc $ testScript <$> scs
 
 {- | Low-level function for running a 'ScriptCase'.
 
- @since 1.3
+@since 2.0
 -}
 runScriptCase :: ScriptCase -> (ScriptResult, String)
 runScriptCase sc =
@@ -132,7 +137,7 @@ runScriptCase sc =
 
 {- | Low-level function for running a script.
 
- @since 1.3
+@since 2.0
 -}
 runScript ::
   -- | Script to run.
