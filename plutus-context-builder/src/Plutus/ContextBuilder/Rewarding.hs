@@ -13,6 +13,8 @@
  Builder for rewarding contexts. 'RewardingBuilder' is an instance of 'Semigroup',
  which allows combining the results of this API's functions into a larger
  'RewardingBuilder' using '<>'.
+
+ @since 4.0.0
 -}
 module Plutus.ContextBuilder.Rewarding (
   -- * Types
@@ -41,52 +43,52 @@ import PlutusLedgerApi.V3 (
 {- | A context builder for Rewarding. Corresponds to
  'Plutus.V1.Ledger.Contexts.Rewarding' specifically.
 
- @since WIP
+ @since 4.0.0
 -}
 data RewardingBuilder = RB BaseBuilder (Maybe Credential)
   deriving stock
-    ( -- | @since WIP
+    ( -- | @since 4.0.0
       Show
     )
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ BaseBuilder, b ~ BaseBuilder) =>
   LabelOptic "inner" k RewardingBuilder RewardingBuilder a b
   where
   labelOptic = lens (\(RB x _) -> x) $ \(RB _ cs) inner' -> RB inner' cs
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Maybe Credential, b ~ Maybe Credential) =>
   LabelOptic "rewardingCred" k RewardingBuilder RewardingBuilder a b
   where
   labelOptic = lens (\(RB _ x) -> x) $ \(RB inner _) cs' -> RB inner cs'
 
--- | @since WIP
+-- | @since 4.0.0
 instance Semigroup RewardingBuilder where
   RB inner _ <> RB inner' cs@(Just _) =
     RB (inner <> inner') cs
   RB inner cs <> RB inner' Nothing =
     RB (inner <> inner') cs
 
--- | @since WIP
+-- | @since 4.0.0
 instance Monoid RewardingBuilder where
   mempty = RB mempty Nothing
 
--- | @since WIP
+-- | @since 4.0.0
 instance Builder RewardingBuilder where
   _bb = #inner
   pack x = set #inner x (mempty :: RewardingBuilder)
 
--- | @since WIP
+-- | @since 4.0.0
 instance Normalizer RewardingBuilder where
   mkNormalized' (RB bb cs) =
     RB (mkNormalized bb) cs
 
 {- | Set CurrencySymbol for building Rewarding ScriptContext.
 
- @since WIP
+ @since 4.0.0
 -}
 withRewarding :: Credential -> RewardingBuilder
 withRewarding sc = RB mempty $ Just sc
@@ -94,7 +96,7 @@ withRewarding sc = RB mempty $ Just sc
 {- | Builds @ScriptContext@ according to given configuration and
  @RewardingBuilder@.
 
- @since WIP
+ @since 4.0.0
 -}
 buildRewarding' :: RewardingBuilder -> ScriptContext
 buildRewarding' builder@(unpack -> bb) =

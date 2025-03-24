@@ -33,30 +33,30 @@ import PlutusLedgerApi.V3 (
 
 {- | Smaller builder that builds context smaller than TxInfo.
 
- @since WIP
+ @since 4.0.0
 -}
 newtype SubBuilder
   = SubBuilder BaseBuilder
   deriving
-    ( -- | @since WIP
+    ( -- | @since 4.0.0
       Semigroup
-    , -- | @since WIP
+    , -- | @since 4.0.0
       Monoid
     )
     via BaseBuilder
 
--- | @since WIP
+-- | @since 4.0.0
 instance Builder SubBuilder where
   _bb = lens (\(SubBuilder x) -> x) (\_ b -> SubBuilder b)
   pack = SubBuilder
 
--- | @since WIP
+-- | @since 4.0.0
 instance Normalizer SubBuilder where
   mkNormalized' (SubBuilder x) = SubBuilder $ mkNormalized x
 
 {- | Builds TxOut from `UTXO`.
 
- @since WIP
+ @since 4.0.0
 -}
 buildTxOut :: UTXO -> TxOut
 buildTxOut = utxoToTxOut
@@ -64,7 +64,7 @@ buildTxOut = utxoToTxOut
 {- | Builds 'TxInInfo' from `UTXO`. If TxId or TxIdx is not set, this will use
      a default value ("" and 0, respectively) to create the 'TxInInfo'.
 
- @since WIP
+ @since 4.0.0
 -}
 buildTxInInfo :: UTXO -> TxInInfo
 buildTxInInfo u =
@@ -74,14 +74,14 @@ buildTxInInfo u =
 
 {- | Builds all TxOuts from given builder.
 
- @since WIP
+ @since 4.0.0
 -}
 buildTxOuts :: SubBuilder -> [TxOut]
 buildTxOuts (unpack -> bb) = utxoToTxOut <$> toList (view #outputs bb)
 
 {- | Builds all TxInInfos from given builder. Returns reason when failed.
 
- @since WIP
+ @since 4.0.0
 -}
 buildTxInInfos :: SubBuilder -> [TxInInfo]
 buildTxInInfos (unpack -> bb) =
@@ -89,7 +89,7 @@ buildTxInInfos (unpack -> bb) =
 
 {- | Builds Datum-Hash pair from all inputs, outputs, extra data of given builder.
 
- @since WIP
+ @since 4.0.0
 -}
 buildDatumHashPairs :: SubBuilder -> [(DatumHash, Datum)]
 buildDatumHashPairs (unpack -> bb) =

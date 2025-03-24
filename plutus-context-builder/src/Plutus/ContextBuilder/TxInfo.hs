@@ -9,6 +9,8 @@
 
  Builder for TxInfo and other utility functions that generates all
  possible Script Context from TxInfo.
+
+ @since 4.0.0
 -}
 module Plutus.ContextBuilder.TxInfo (
   TxInfoBuilder (..),
@@ -49,13 +51,13 @@ import PlutusTx.AssocMap qualified as AssocMap
 
 {- | Builder that builds TxInfo.
 
- @since WIP
+ @since 4.0.0
 -}
 newtype TxInfoBuilder
   = TxInfoBuilder BaseBuilder
   deriving (Semigroup, Monoid) via BaseBuilder
 
--- | @since WIP
+-- | @since 4.0.0
 instance Builder TxInfoBuilder where
   _bb = lens (\(TxInfoBuilder x) -> x) (\_ b -> TxInfoBuilder b)
   pack = TxInfoBuilder
@@ -65,7 +67,7 @@ instance Normalizer TxInfoBuilder where
 
 {- | Builds `TxInfo` from TxInfoBuilder.
 
- @since WIP
+ @since 4.0.0
 -}
 buildTxInfo :: TxInfoBuilder -> TxInfo
 buildTxInfo (unpack -> builder) =

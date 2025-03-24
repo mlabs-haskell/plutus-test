@@ -14,6 +14,8 @@
  Such specific builders are abstracted from 'BaseBuilder'. All
  interfaces here return instances of the 'Builder' typeclass. And as
  a result, they can be used by all other instances of 'Builder'.
+
+ @since 4.0.0
 -}
 module Plutus.ContextBuilder.Base (
   -- * Types
@@ -166,7 +168,7 @@ import PlutusLedgerApi.V3.MintValue qualified as MintValue
 import PlutusTx.AssocMap (Map)
 import PlutusTx.AssocMap qualified as AssocMap
 
--- | @since WIP
+-- | @since 4.0.0
 data DatumType
   = InlineDatum Data
   | ContextDatum Data
@@ -175,17 +177,17 @@ data DatumType
 {- | Minted tokens that have the same symbol, and the redeemer used to mint
       those tokens.
 
-     @since WIP
+     @since 4.0.0
 -}
 data Mint = Mint CurrencySymbol [(TokenName, Integer)] Data
   deriving stock
-    ( -- | @since WIP
+    ( -- | @since 4.0.0
       Show
-    , -- | @since WIP
+    , -- | @since 4.0.0
       Eq
     )
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ CurrencySymbol, b ~ CurrencySymbol) =>
   LabelOptic "symbol" k Mint Mint a b
@@ -193,7 +195,7 @@ instance
   labelOptic = lens (\(Mint cs _ _) -> cs) $ \(Mint _ toks red) cs' ->
     Mint cs' toks red
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ [(TokenName, Integer)], b ~ [(TokenName, Integer)]) =>
   LabelOptic "tokens" k Mint Mint a b
@@ -201,7 +203,7 @@ instance
   labelOptic = lens (\(Mint _ toks _) -> toks) $ \(Mint cs _ red) toks' ->
     Mint cs toks' red
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Data, b ~ Data) =>
   LabelOptic "redeemer" k Mint Mint a b
@@ -209,13 +211,13 @@ instance
   labelOptic = lens (\(Mint _ _ red) -> red) $ \(Mint cs toks _) red' ->
     Mint cs toks red'
 
--- | @since WIP
+-- | @since 4.0.0
 mkMint :: CurrencySymbol -> [(TokenName, Integer)] -> Data -> Mint
 mkMint = Mint
 
 {- | Normalize mint amount.
 
- @since WIP
+ @since 4.0.0
 -}
 normalizeMint :: Mint -> Mint
 normalizeMint =
@@ -231,7 +233,7 @@ A UTXO' contains:
 
 This is different from 'TxOut', in that we store the 'Data' fully instead of the 'DatumHash'.
 
- @since WIP
+ @since 4.0.0
 -}
 data UTXO
   = UTXO
@@ -244,11 +246,11 @@ data UTXO
       (Last Integer)
       (Last Data)
   deriving stock
-    ( -- | @since WIP
+    ( -- | @since 4.0.0
       Show
     )
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Maybe Credential, b ~ Maybe Credential) =>
   LabelOptic "credential" k UTXO UTXO a b
@@ -257,7 +259,7 @@ instance
     \(UTXO _ scred val dat rs ti tix red) cred' ->
       UTXO (coerce cred') scred val dat rs ti tix red
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Maybe StakingCredential, b ~ Maybe StakingCredential) =>
   LabelOptic "stakingCredential" k UTXO UTXO a b
@@ -265,7 +267,7 @@ instance
   labelOptic = lens (\(UTXO _ x _ _ _ _ _ _) -> coerce x) $ \(UTXO cred _ val dat rs ti tix red) scred' ->
     UTXO cred (coerce scred') val dat rs ti tix red
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Value, b ~ Value) =>
   LabelOptic "value" k UTXO UTXO a b
@@ -273,7 +275,7 @@ instance
   labelOptic = lens (\(UTXO _ _ x _ _ _ _ _) -> x) $ \(UTXO cred scred _ dat rs ti tix red) val' ->
     UTXO cred scred val' dat rs ti tix red
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Maybe DatumType, b ~ Maybe DatumType) =>
   LabelOptic "data" k UTXO UTXO a b
@@ -281,7 +283,7 @@ instance
   labelOptic = lens (\(UTXO _ _ _ x _ _ _ _) -> coerce x) $ \(UTXO cred scred val _ rs ti tix red) dat' ->
     UTXO cred scred val (coerce dat') rs ti tix red
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Maybe ScriptHash, b ~ Maybe ScriptHash) =>
   LabelOptic "referenceScript" k UTXO UTXO a b
@@ -289,7 +291,7 @@ instance
   labelOptic = lens (\(UTXO _ _ _ _ x _ _ _) -> coerce x) $ \(UTXO cred scred val dat _ ti tix red) rs' ->
     UTXO cred scred val dat (coerce rs') ti tix red
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Maybe TxId, b ~ Maybe TxId) =>
   LabelOptic "txId" k UTXO UTXO a b
@@ -297,7 +299,7 @@ instance
   labelOptic = lens (\(UTXO _ _ _ _ _ x _ _) -> coerce x) $ \(UTXO cred scred val dat rs _ tix red) ti' ->
     UTXO cred scred val dat rs (coerce ti') tix red
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Maybe Integer, b ~ Maybe Integer) =>
   LabelOptic "txIdx" k UTXO UTXO a b
@@ -305,7 +307,7 @@ instance
   labelOptic = lens (\(UTXO _ _ _ _ _ _ x _) -> coerce x) $ \(UTXO cred scred val dat rs ti _ red) tix' ->
     UTXO cred scred val dat rs ti (coerce tix') red
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Maybe Data, b ~ Maybe Data) =>
   LabelOptic "redeemer" k UTXO UTXO a b
@@ -313,7 +315,7 @@ instance
   labelOptic = lens (\(UTXO _ _ _ _ _ _ _ x) -> coerce x) $ \(UTXO cred scred val dat rs ti tix _) red' ->
     UTXO cred scred val dat rs ti tix . coerce $ red'
 
--- | @since WIP
+-- | @since 4.0.0
 instance Semigroup UTXO where
   (UTXO c stc v d rs t tidx r) <> (UTXO c' stc' v' d' rs' t' tidx' r') =
     UTXO
@@ -326,13 +328,13 @@ instance Semigroup UTXO where
       (tidx <> tidx')
       (r <> r')
 
--- | @since WIP
+-- | @since 4.0.0
 instance Monoid UTXO where
   mempty = UTXO mempty mempty mempty mempty mempty mempty mempty mempty
 
 {- | Pulls address output of given UTXO'
 
- @since WIP
+ @since 4.0.0
 -}
 utxoAddress :: UTXO -> Address
 utxoAddress utxo =
@@ -361,14 +363,14 @@ utxoDatumPair utxo = do
 
 {- | Normalize the value 'UTXO' holds.
 
- @since WIP
+ @since 4.0.0
 -}
 normalizeUTXO :: UTXO -> UTXO
 normalizeUTXO = over #value normalizeValue
 
 {- | Construct TxOut of given UTXO
 
- @since WIP
+ @since 4.0.0
 -}
 utxoToTxOut ::
   UTXO ->
@@ -380,7 +382,7 @@ utxoToTxOut utxo =
 
 {- | Specify datum of a UTXO.
 
- @since WIP
+ @since 4.0.0
 -}
 withHashDatum ::
   forall (datum :: Type).
@@ -392,7 +394,7 @@ withHashDatum dat =
 
 {- | Specify in-line datum of a UTXO.
 
- @since WIP
+ @since 4.0.0
 -}
 withInlineDatum ::
   forall (datum :: Type).
@@ -404,7 +406,7 @@ withInlineDatum dat =
 
 {- | Specify reference script of a UTXO.
 
- @since WIP
+ @since 4.0.0
 -}
 withReferenceScript :: ScriptHash -> UTXO
 withReferenceScript sh =
@@ -415,7 +417,7 @@ withReferenceScript sh =
  Note that the redeemer is added to the final redeemer map only when it's in
   inputs and have both 'TxId' and 'TxIdx' explicitly provided by the user.
 
- @since WIP
+ @since 4.0.0
 -}
 withRedeemer ::
   forall (redeemer :: Type).
@@ -427,7 +429,7 @@ withRedeemer r =
 
 {- | Specify reference `TxId` of a UTXO.
 
- @since WIP
+ @since 4.0.0
 -}
 withRefTxId :: TxId -> UTXO
 withRefTxId tid =
@@ -435,7 +437,7 @@ withRefTxId tid =
 
 {- | Specify reference index of a UTXO.
 
- @since WIP
+ @since 4.0.0
 -}
 withRefIndex :: Integer -> UTXO
 withRefIndex tidx =
@@ -443,7 +445,7 @@ withRefIndex tidx =
 
 {- | Specify `TxOutRef` of a UTXO.
 
- @since WIP
+ @since 4.0.0
 -}
 withRef :: TxOutRef -> UTXO
 withRef (TxOutRef tid idx) = withRefTxId tid <> withRefIndex idx
@@ -451,14 +453,14 @@ withRef (TxOutRef tid idx) = withRefTxId tid <> withRefIndex idx
 {- | Specify the `Value` of a UTXO. This will be monoidally merged `Value`s
  when given multiple times.
 
- @since WIP
+ @since 4.0.0
 -}
 withValue :: Value -> UTXO
 withValue val = set #value val (mempty :: UTXO)
 
 {- | Specify `StakingCredential` to a UTXO.
 
- @since WIP
+ @since 4.0.0
 -}
 withStakingCredential :: StakingCredential -> UTXO
 withStakingCredential stak =
@@ -466,7 +468,7 @@ withStakingCredential stak =
 
 {- | Specify `Address` of a UTXO.
 
- @since WIP
+ @since 4.0.0
 -}
 address :: Address -> UTXO
 address Address {..} =
@@ -476,14 +478,14 @@ address Address {..} =
 
 {- | Specify `Credential` of a UTXO.
 
- @since WIP
+ @since 4.0.0
 -}
 credential :: Credential -> UTXO
 credential cred = set #credential (pure cred) (mempty :: UTXO)
 
 {- | Specify `PubKeyHash` of a UTXO.
 
- @since WIP
+ @since 4.0.0
 -}
 pubKey :: PubKeyHash -> UTXO
 pubKey (PubKeyCredential -> cred) =
@@ -491,7 +493,7 @@ pubKey (PubKeyCredential -> cred) =
 
 {- | Specify `ScriptHash` of a UTXO.
 
- @since WIP
+ @since 4.0.0
 -}
 script :: ScriptHash -> UTXO
 script (ScriptCredential -> cred) =
@@ -504,13 +506,13 @@ script (ScriptCredential -> cred) =
  1. view _bb . pack = id
  2. pack . view _bb = id
 
- @since WIP
+ @since 4.0.0
 -}
 class Builder a where
   _bb :: Lens' a BaseBuilder
   pack :: BaseBuilder -> a
 
--- | @since WIP
+-- | @since 4.0.0
 unpack :: (Builder a) => a -> BaseBuilder
 unpack = view _bb
 
@@ -519,7 +521,7 @@ extra datums. BaseBuilder provides such basic functionalities for
 'ScriptContext' creation, leaving specific builders only with
 minimal logical checks.
 
-@since WIP
+@since 4.0.0
 -}
 data BaseBuilder
   = BB
@@ -542,7 +544,7 @@ data BaseBuilder
       (Maybe (Sum Lovelace)) -- treasury donation amount
   deriving stock (Show)
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Last Redeemer, b ~ Last Redeemer) =>
   LabelOptic "redeemer" k BaseBuilder BaseBuilder a b
@@ -551,7 +553,7 @@ instance
     \(BB _ ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon) red' ->
       BB red' ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Acc UTXO, b ~ Acc UTXO) =>
   LabelOptic "inputs" k BaseBuilder BaseBuilder a b
@@ -560,7 +562,7 @@ instance
     \(BB red _ rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon) ins' ->
       BB red ins' rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Acc UTXO, b ~ Acc UTXO) =>
   LabelOptic "referenceInputs" k BaseBuilder BaseBuilder a b
@@ -569,7 +571,7 @@ instance
     \(BB red ins _ outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon) rins' ->
       BB red ins rins' outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Acc UTXO, b ~ Acc UTXO) =>
   LabelOptic "outputs" k BaseBuilder BaseBuilder a b
@@ -578,7 +580,7 @@ instance
     \(BB red ins rins _ sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon) outs' ->
       BB red ins rins outs' sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Acc PubKeyHash, b ~ Acc PubKeyHash) =>
   LabelOptic "signatures" k BaseBuilder BaseBuilder a b
@@ -587,7 +589,7 @@ instance
     \(BB red ins rins outs _ dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon) sigs' ->
       BB red ins rins outs sigs' dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Acc Data, b ~ Acc Data) =>
   LabelOptic "datums" k BaseBuilder BaseBuilder a b
@@ -596,7 +598,7 @@ instance
     \(BB red ins rins outs sigs _ ms f tr txi reds wdrls txcerts votes pprocs curtr trdon) dats' ->
       BB red ins rins outs sigs dats' ms f tr txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Acc Mint, b ~ Acc Mint) =>
   LabelOptic "mints" k BaseBuilder BaseBuilder a b
@@ -605,7 +607,7 @@ instance
     \(BB red ins rins outs sigs dats _ f tr txi reds wdrls txcerts votes pprocs curtr trdon) ms' ->
       BB red ins rins outs sigs dats ms' f tr txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Lovelace, b ~ Lovelace) =>
   LabelOptic "fee" k BaseBuilder BaseBuilder a b
@@ -614,7 +616,7 @@ instance
     \(BB red ins rins outs sigs dats ms _ tr txi reds wdrls txcerts votes pprocs curtr trdon) f' ->
       BB red ins rins outs sigs dats ms (coerce f') tr txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Interval POSIXTime, b ~ Interval POSIXTime) =>
   LabelOptic "timeRange" k BaseBuilder BaseBuilder a b
@@ -623,7 +625,7 @@ instance
     \(BB red ins rins outs sigs dats ms f _ txi reds wdrls txcerts votes pprocs curtr trdon) tr' ->
       BB red ins rins outs sigs dats ms f tr' txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ TxId, b ~ TxId) =>
   LabelOptic "txId" k BaseBuilder BaseBuilder a b
@@ -632,7 +634,7 @@ instance
     \(BB red ins rins outs sigs dats ms f tr _ reds wdrls txcerts votes pprocs curtr trdon) txi' ->
       BB red ins rins outs sigs dats ms f tr txi' reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   ( k ~ A_Lens
   , a ~ Acc (ScriptPurpose, Redeemer)
@@ -644,7 +646,7 @@ instance
     \(BB red ins rins outs sigs dats ms f tr txi _ wdrls txcerts votes pprocs curtr trdon) reds' ->
       BB red ins rins outs sigs dats ms f tr txi reds' wdrls txcerts votes pprocs curtr trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   ( k ~ A_Lens
   , a ~ Acc (Credential, Lovelace)
@@ -656,7 +658,7 @@ instance
     \(BB red ins rins outs sigs dats ms f tr txi reds _ txcerts votes pprocs curtr trdon) wdrls' ->
       BB red ins rins outs sigs dats ms f tr txi reds wdrls' txcerts votes pprocs curtr trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Acc TxCert, b ~ Acc TxCert) =>
   LabelOptic "txCerts" k BaseBuilder BaseBuilder a b
@@ -665,7 +667,7 @@ instance
     \(BB red ins rins outs sigs dats ms f tr txi reds wdrls _ votes pprocs curtr trdon) txcerts' ->
       BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts' votes pprocs curtr trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Acc (Voter, GovernanceActionId, Vote), b ~ Acc (Voter, GovernanceActionId, Vote)) =>
   LabelOptic "votes" k BaseBuilder BaseBuilder a b
@@ -674,7 +676,7 @@ instance
     \(BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts _ pprocs curtr trdon) votes' ->
       BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes' pprocs curtr trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Acc ProposalProcedure, b ~ Acc ProposalProcedure) =>
   LabelOptic "proposalProcedures" k BaseBuilder BaseBuilder a b
@@ -683,7 +685,7 @@ instance
     \(BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes _ curtr trdon) pprocs' ->
       BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs' curtr trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Maybe Lovelace, b ~ Maybe Lovelace) =>
   LabelOptic "currentTreasuryAmount" k BaseBuilder BaseBuilder a b
@@ -692,7 +694,7 @@ instance
     \(BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs _ trdon) curtr' ->
       BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs (coerce curtr') trdon
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Maybe Lovelace, b ~ Maybe Lovelace) =>
   LabelOptic "treasuryDonation" k BaseBuilder BaseBuilder a b
@@ -701,7 +703,7 @@ instance
     \(BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr _) trdon' ->
       BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr (coerce trdon')
 
--- | @since WIP
+-- | @since 4.0.0
 instance Semigroup BaseBuilder where
   BB red ins refIns outs sigs dats ms fval range tid rs wdrls txcerts votes pprocs curtr trdon
     <> BB red' ins' refIns' outs' sigs' dats' ms' fval' range' tid' rs' wdrls' txcerts' votes' pprocs' curtr' trdon' =
@@ -735,7 +737,7 @@ instance Semigroup BaseBuilder where
           | view ell mempty == y = x
           | otherwise = y
 
--- | @since WIP
+-- | @since 4.0.0
 instance Monoid BaseBuilder where
   mempty =
     BB
@@ -757,7 +759,7 @@ instance Monoid BaseBuilder where
       mempty
       mempty
 
--- | @since WIP
+-- | @since 4.0.0
 instance Builder BaseBuilder where
   _bb = lens id $ const id
   pack = id
@@ -772,7 +774,7 @@ datafy = toData
 
 {- | Adds signer to builder.
 
-@since WIP
+@since 4.0.0
 -}
 signedWith ::
   forall (a :: Type).
@@ -781,7 +783,7 @@ signedWith ::
   a
 signedWith pkh = pack . set #signatures (pure pkh) $ (mempty :: BaseBuilder)
 
--- | @since WIP
+-- | @since 4.0.0
 valueToMints ::
   forall (redeemer :: Type).
   (ToData redeemer) =>
@@ -794,7 +796,7 @@ valueToMints r = fmap f . AssocMap.toList . getValue
 
 {- | Mint given value.
 
-@since WIP
+@since 4.0.0
 -}
 mint ::
   forall (a :: Type).
@@ -805,7 +807,7 @@ mint = mintWith ()
 
 {- | Mint tokens with given redeemer.
 
-@since WIP
+@since 4.0.0
 -}
 mintWith ::
   forall (builder :: Type) (redeemer :: Type).
@@ -819,7 +821,7 @@ mintWith r val =
 
 {- Mint singleton valuw with given redeemer.
 
- @since WIP
+ @since 4.0.0
 -}
 mintSingletonWith ::
   forall (builder :: Type) (redeemer :: Type).
@@ -833,7 +835,7 @@ mintSingletonWith r cs tn q = mintWith r $ Value.singleton cs tn q
 
 {- | Append extra datum to @ScriptContex@.
 
-@since WIP
+@since 4.0.0
 -}
 extraData ::
   forall (builder :: Type) (datum :: Type).
@@ -856,7 +858,7 @@ extraRedeemer p r =
 
 {- | Specify a withdrawal for the script context
 
-@since WIP
+@since 4.0.0
 -}
 withdrawal ::
   forall (a :: Type).
@@ -870,7 +872,7 @@ withdrawal stakingCred withdrawalAmount =
 
 {- | Specify `TxId` of a script context.
 
-@since WIP
+@since 4.0.0
 -}
 txId ::
   forall (a :: Type).
@@ -881,7 +883,7 @@ txId tid = pack . set #txId tid $ (mempty :: BaseBuilder)
 
 {- | Specify transaction fee of a script context.
 
-@since WIP
+@since 4.0.0
 -}
 fee ::
   forall (a :: Type).
@@ -892,7 +894,7 @@ fee val = pack . set #fee val $ (mempty :: BaseBuilder)
 
 {- | Specify time range of a script context.
 
-@since WIP
+@since 4.0.0
 -}
 timeRange ::
   forall (a :: Type).
@@ -903,7 +905,7 @@ timeRange r = pack . set #timeRange r $ (mempty :: BaseBuilder)
 
 {- | Specify a 'TxCert' to be included in the transaction.
 
-@since WIP
+@since 4.0.0
 -}
 txCert ::
   forall (a :: Type).
@@ -914,7 +916,7 @@ txCert d = pack . set #txCerts (pure d) $ (mempty :: BaseBuilder)
 
 {- | Specify an output of a script context.
 
-@since WIP
+@since 4.0.0
 -}
 output ::
   forall (a :: Type).
@@ -925,7 +927,7 @@ output x = pack . set #outputs (pure x) $ (mempty :: BaseBuilder)
 
 {- | Specify an input of a script context.
 
-@since WIP
+@since 4.0.0
 -}
 input ::
   forall (a :: Type).
@@ -936,7 +938,7 @@ input x = pack . set #inputs (pure x) $ (mempty :: BaseBuilder)
 
 {- | Specify a reference input of a script context.
 
-@since WIP
+@since 4.0.0
 -}
 referenceInput ::
   forall (a :: Type).
@@ -987,7 +989,7 @@ treasuryDonation x =
 {- | As 'continuingWith', but assumes the \'continued\' 'Value' does not change.
  Useful for state tokens.
 
- @since WIP
+ @since 4.0.0
 -}
 continuing ::
   forall (a :: Type).
@@ -1018,7 +1020,7 @@ continuing = continuingWith id
  affected by the application of the 'Value' transformation function between
  input and output.
 
- @since WIP
+ @since 4.0.0
 -}
 continuingWith ::
   forall (a :: Type).
@@ -1038,7 +1040,7 @@ continuingWith deltaV deltaU inUTXO val =
 
 {- | Provide base @TxInfo@ to Continuation Monad.
 
- @since WIP
+ @since 4.0.0
 -}
 yieldBaseTxInfo ::
   forall (b :: Type).
@@ -1080,7 +1082,7 @@ yieldBaseTxInfo (unpack -> bb) =
 
 {- | Provide total mints to Continuation Monad.
 
- @since WIP
+ @since 4.0.0
 -}
 yieldMint ::
   Acc Mint ->
@@ -1089,7 +1091,7 @@ yieldMint = foldMap mintToValue . toList
 
 {- | Convert a 'Mint' to a 'Value'.
 
-     @since WIP
+     @since 4.0.0
 -}
 mintToValue :: Mint -> Value
 mintToValue m =
@@ -1100,7 +1102,7 @@ mintToValue m =
 
 {- | Provide DatumHash-Datum pair to Continuation Monad.
 
- @since WIP
+ @since 4.0.0
 -}
 yieldExtraDatums ::
   Acc Data ->
@@ -1111,7 +1113,7 @@ yieldExtraDatums (toList -> ds) =
 {- | Provide list of TxInInfo and DatumHash-Datum pair for inputs to
  Continuation Monad.
 
- @since WIP
+ @since 4.0.0
 -}
 yieldInInfoDatums ::
   Acc UTXO ->
@@ -1134,7 +1136,7 @@ yieldInInfoDatums (toList -> inputs) =
 {- | Provide list of TxOut and DatumHash-Datum pair for outputs to
  Continuation Monad.
 
- @since WIP
+ @since 4.0.0
 -}
 yieldOutDatums ::
   Acc UTXO ->
@@ -1150,7 +1152,7 @@ yieldOutDatums (toList -> outputs) =
 {- | Provide script purpose - redeemer map for outputs to
  Continuation Monad.
 
-     @since WIP
+     @since 4.0.0
 -}
 yieldRedeemerMap ::
   Acc UTXO ->
@@ -1181,7 +1183,7 @@ yieldRedeemerMap au am = scriptInputs <> mints
  are duplicate reserved indices, the second occurrence will be
  treated as non-reserved and given incremental index.
 
- @since WIP
+ @since 4.0.0
 -}
 mkOutRefIndices ::
   forall (a :: Type).
@@ -1207,7 +1209,7 @@ mkOutRefIndices = over _bb go
      element is equal, using the given concat function. The output
      will be the reverse of what's given.
 
- @since WIP
+ @since 4.0.0
 -}
 combinePair ::
   forall (k :: Type) (v :: Type).
@@ -1225,7 +1227,7 @@ combinePair c (k, v) ((k', v') : xs)
      using the given concat function. The output will be the reverse
      of what's given.
 
- @since WIP
+ @since 4.0.0
 -}
 combineMap ::
   forall (k :: Type) (v :: Type).
@@ -1238,7 +1240,7 @@ combineMap c (AssocMap.toList -> m) =
 
 {- | Sort given 'AssocMap' by given comparator.
 
- @since WIP
+ @since 4.0.0
 -}
 sortMap ::
   forall (k :: Type) (v :: Type).
@@ -1262,7 +1264,7 @@ sortMap (AssocMap.toList -> m) =
     - Non-Ada "TokenName"s under the Ada currency symbol are silently
       stripped.
 
- @since WIP
+ @since 4.0.0
 -}
 normalizeValue :: Value -> Value
 normalizeValue (getValue -> val) =
@@ -1305,7 +1307,7 @@ normalizeValue (getValue -> val) =
 
 {- | Normalize all values and mints in the given builder.
 
- @since WIP
+ @since 4.0.0
 -}
 mkNormalizedBase ::
   forall (a :: Type).

@@ -13,6 +13,8 @@
  Builder for rewarding contexts. 'CertifyingBuilder' is an instance of 'Semigroup',
  which allows combining the results of this API's functions into a larger
  'CertifyingBuilder' using '<>'.
+
+ @since 4.0.0
 -}
 module Plutus.ContextBuilder.Certifying (
   -- * Types
@@ -46,52 +48,52 @@ import PlutusLedgerApi.V3 (
 {- | A context builder for Certifying. Corresponds to
  'Plutus.V1.Ledger.Contexts.Certifying' specifically.
 
- @since WIP
+ @since 4.0.0
 -}
 data CertifyingBuilder = CB BaseBuilder (Maybe TxCert)
   deriving stock
-    ( -- | @since WIP
+    ( -- | @since 4.0.0
       Show
     )
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ BaseBuilder, b ~ BaseBuilder) =>
   LabelOptic "inner" k CertifyingBuilder CertifyingBuilder a b
   where
   labelOptic = lens (\(CB x _) -> x) $ \(CB _ cs) inner' -> CB inner' cs
 
--- | @since WIP
+-- | @since 4.0.0
 instance
   (k ~ A_Lens, a ~ Maybe TxCert, b ~ Maybe TxCert) =>
   LabelOptic "certifyingTxCert" k CertifyingBuilder CertifyingBuilder a b
   where
   labelOptic = lens (\(CB _ x) -> x) $ \(CB inner _) cs' -> CB inner cs'
 
--- | @since WIP
+-- | @since 4.0.0
 instance Semigroup CertifyingBuilder where
   CB inner _ <> CB inner' cs@(Just _) =
     CB (inner <> inner') cs
   CB inner cs <> CB inner' Nothing =
     CB (inner <> inner') cs
 
--- | @since WIP
+-- | @since 4.0.0
 instance Monoid CertifyingBuilder where
   mempty = CB mempty Nothing
 
--- | @since WIP
+-- | @since 4.0.0
 instance Builder CertifyingBuilder where
   _bb = #inner
   pack x = set #inner x (mempty :: CertifyingBuilder)
 
--- | @since WIP
+-- | @since 4.0.0
 instance Normalizer CertifyingBuilder where
   mkNormalized' (CB bb cs) =
     CB (mkNormalized bb) cs
 
 {- | Set DCert for building Certifying ScriptContext.
 
- @since WIP
+ @since 4.0.0
 -}
 withCertifying :: TxCert -> CertifyingBuilder
 withCertifying sc = CB mempty $ Just sc
@@ -99,7 +101,7 @@ withCertifying sc = CB mempty $ Just sc
 {- | Builds @ScriptContext@ according to given configuration and
  @CertifyingBuilder@.
 
- @since WIP
+ @since 4.0.0
 -}
 buildCertifying' ::
   CertifyingBuilder ->
