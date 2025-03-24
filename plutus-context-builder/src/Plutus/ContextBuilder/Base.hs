@@ -49,6 +49,7 @@ module Plutus.ContextBuilder.Base (
   proposalProcedure,
   currentTreasuryAmount,
   treasuryDonation,
+  scriptRedeemer,
 
   -- * Others
   unpack,
@@ -129,7 +130,7 @@ import PlutusLedgerApi.V3 (
   ScriptHash,
   ScriptPurpose (Minting, Spending),
   StakingCredential,
-  ToData,
+  ToData (toBuiltinData),
   TokenName,
   TxCert,
   TxId (TxId),
@@ -948,7 +949,10 @@ referenceInput ::
 referenceInput x =
   pack . set #referenceInputs (pure x) $ (mempty :: BaseBuilder)
 
--- | Specify a vote of a script context.
+{- | Specify a vote of a script context.
+
+@since 4.0.0
+-}
 vote ::
   forall (a :: Type).
   (Builder a) =>
@@ -959,7 +963,10 @@ vote ::
 vote voter action vote' =
   pack . set #votes (pure (voter, action, vote')) $ (mempty :: BaseBuilder)
 
--- | Specify a proposal procedure of a script context.
+{- | Specify a proposal procedure of a script context.
+
+@since 4.0.0
+-}
 proposalProcedure ::
   forall (a :: Type).
   (Builder a) =>
@@ -968,7 +975,10 @@ proposalProcedure ::
 proposalProcedure x =
   pack . set #proposalProcedures (pure x) $ (mempty :: BaseBuilder)
 
--- | Specify a treasury donation of a script context.
+{- | Specify a treasury donation of a script context.
+
+@since 4.0.0
+-}
 currentTreasuryAmount ::
   forall (a :: Type).
   (Builder a) =>
@@ -977,7 +987,10 @@ currentTreasuryAmount ::
 currentTreasuryAmount x =
   pack . set #currentTreasuryAmount (pure x) $ (mempty :: BaseBuilder)
 
--- | Specify a treasury donation of a script context.
+{- | Specify a treasury donation of a script context.
+
+@since 4.0.0
+-}
 treasuryDonation ::
   forall (a :: Type).
   (Builder a) =>
@@ -985,6 +998,13 @@ treasuryDonation ::
   a
 treasuryDonation x =
   pack . set #treasuryDonation (pure x) $ (mempty :: BaseBuilder)
+
+{- | Specify the redeemer of the current script
+
+@since 4.1.0
+-}
+scriptRedeemer :: forall (a :: Type) (b :: Type). (ToData a, Builder b) => a -> b
+scriptRedeemer r = pack . set #redeemer (pure $ Redeemer $ toBuiltinData r) $ (mempty :: BaseBuilder)
 
 {- | As 'continuingWith', but assumes the \'continued\' 'Value' does not change.
  Useful for state tokens.
