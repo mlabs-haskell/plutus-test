@@ -24,40 +24,18 @@ module Plutus.ContextBuilder.Rewarding (
   buildRewarding',
 ) where
 
-import Data.Foldable (Foldable (toList))
+import Data.Maybe (fromMaybe)
+import Data.Monoid (Last (getLast))
 import Optics (A_Lens, LabelOptic (labelOptic), lens, set, view)
-import Plutus.ContextBuilder.Base (
-  BaseBuilder,
-  Builder (pack, _bb),
-  unpack,
-  yieldBaseTxInfo,
-  yieldExtraDatums,
-  yieldInInfoDatums,
-  yieldMint,
-  yieldOutDatums,
-  yieldRedeemerMap,
- )
+import Plutus.ContextBuilder.Base (BaseBuilder, Builder (pack, _bb), unpack, yieldBaseTxInfo)
 import Plutus.ContextBuilder.Internal (Normalizer (mkNormalized'), mkNormalized)
 import PlutusLedgerApi.V3 (
   Credential (PubKeyCredential),
-  Redeemer,
+  Redeemer (Redeemer),
   ScriptContext (ScriptContext),
   ScriptInfo (RewardingScript),
-  TxInfo (
-    txInfoData,
-    txInfoInputs,
-    txInfoMint,
-    txInfoOutputs,
-    txInfoRedeemers,
-    txInfoReferenceInputs,
-    txInfoSignatories,
-    txInfoTxCerts,
-    txInfoWdrl
-  ),
-  Value (getValue),
+  ToData (toBuiltinData),
  )
-import PlutusLedgerApi.V3.MintValue (MintValue (UnsafeMintValue))
-import PlutusTx.AssocMap qualified as AssocMap
 
 {- | A context builder for Rewarding. Corresponds to
  'Plutus.V1.Ledger.Contexts.Rewarding' specifically.
@@ -117,30 +95,10 @@ withRewarding sc = RB mempty $ Just sc
 
  @since 2.8.0
 -}
-buildRewarding' ::
-  Redeemer ->
-  RewardingBuilder ->
-  ScriptContext
-buildRewarding' redeemer builder@(unpack -> bb) =
-  let (ins, inDat) = yieldInInfoDatums . view #inputs $ bb
-      (refin, _) = yieldInInfoDatums . view #referenceInputs $ bb
-      (outs, outDat) = yieldOutDatums . view #outputs $ bb
-      mintedValue = yieldMint . view #mints $ bb
-      extraDat = yieldExtraDatums . view #datums $ bb
-      base = yieldBaseTxInfo builder
-      redeemerMap = yieldRedeemerMap (view #inputs bb) (view #mints bb)
-      txinfo =
-        base
-          { txInfoInputs = ins
-          , txInfoReferenceInputs = refin
-          , txInfoOutputs = outs
-          , txInfoData = AssocMap.unsafeFromList $ inDat <> outDat <> extraDat
-          , txInfoMint = UnsafeMintValue $ getValue mintedValue
-          , txInfoRedeemers = AssocMap.unsafeFromList $ toList (view #redeemers bb) <> redeemerMap
-          , txInfoSignatories = toList . view #signatures $ bb
-          , txInfoWdrl = AssocMap.unsafeFromList $ toList (view #withdrawals bb)
-          , txInfoTxCerts = toList (view #txCerts bb)
-          }
+buildRewarding' :: RewardingBuilder -> ScriptContext
+buildRewarding' builder@(unpack -> bb) =
+  let txinfo = yieldBaseTxInfo builder
+      redeemer = fromMaybe (Redeemer $ toBuiltinData ()) $ getLast $ view #redeemer bb
       rewardCred = case view #rewardingCred builder of
         Just cred -> RewardingScript cred
         Nothing -> RewardingScript . PubKeyCredential $ ""

@@ -42,6 +42,10 @@ module Plutus.ContextBuilder.Base (
   withRef,
   withRedeemer,
   mkMint,
+  vote,
+  proposalProcedure,
+  currentTreasuryAmount,
+  treasuryDonation,
 
   -- * Others
   unpack,
@@ -90,7 +94,7 @@ import Data.Foldable (Foldable (toList))
 import Data.Kind (Type)
 import Data.List (nub, sort, sortBy, sortOn)
 import Data.Maybe (fromMaybe, mapMaybe)
-import Data.Monoid (Last (Last))
+import Data.Monoid (Last (Last), Sum (Sum))
 import GHC.Exts (coerce, fromList)
 import Optics (
   A_Lens,
@@ -111,10 +115,12 @@ import PlutusLedgerApi.V3 (
   Data,
   Datum (Datum),
   DatumHash (DatumHash),
+  GovernanceActionId,
   Interval,
   Lovelace,
   OutputDatum (NoOutputDatum, OutputDatum, OutputDatumHash),
   POSIXTime,
+  ProposalProcedure,
   PubKeyHash (PubKeyHash),
   Redeemer (Redeemer),
   ScriptHash,
@@ -147,6 +153,8 @@ import PlutusLedgerApi.V3 (
   TxOut (TxOut),
   TxOutRef (TxOutRef),
   Value (getValue),
+  Vote,
+  Voter,
   adaSymbol,
   adaToken,
   always,
@@ -506,110 +514,124 @@ unpack :: (Builder a) => a -> BaseBuilder
 unpack = view _bb
 
 {- | Base builder. Handles basic input, output, signs, mints, and
- extra datums. BaseBuilder provides such basic functionalities for
- 'ScriptContext' creation, leaving specific builders only with
- minimal logical checks.
+extra datums. BaseBuilder provides such basic functionalities for
+'ScriptContext' creation, leaving specific builders only with
+minimal logical checks.
 
- @since 2.7.0
+@since 3.0.0
 -}
 data BaseBuilder
   = BB
-      (Acc UTXO)
-      (Acc UTXO)
-      (Acc UTXO)
-      (Acc PubKeyHash)
-      (Acc Data)
-      (Acc Mint)
-      Lovelace
-      (Interval POSIXTime)
-      TxId
-      (Acc (ScriptPurpose, Redeemer))
-      (Acc (Credential, Lovelace))
-      (Acc TxCert)
+      (Last Redeemer)
+      (Acc UTXO) -- inputs
+      (Acc UTXO) -- reference inputs
+      (Acc UTXO) -- outputs
+      (Acc PubKeyHash) -- signers
+      (Acc Data) -- datums
+      (Acc Mint) -- mints
+      (Sum Lovelace) -- fee
+      (Interval POSIXTime) -- validity range
+      TxId -- transaction id
+      (Acc (ScriptPurpose, Redeemer)) -- redeemers
+      (Acc (Credential, Lovelace)) -- withdrawals
+      (Acc TxCert) -- transaction certificates
+      (Acc (Voter, GovernanceActionId, Vote)) -- votes
+      (Acc ProposalProcedure) -- proposal procedures
+      (Maybe (Sum Lovelace)) -- current treasury amount
+      (Maybe (Sum Lovelace)) -- treasury donation amount
   deriving stock (Show)
 
--- | @since 2.5.0
+-- | @since 3.0.0
+instance
+  (k ~ A_Lens, a ~ Last Redeemer, b ~ Last Redeemer) =>
+  LabelOptic "redeemer" k BaseBuilder BaseBuilder a b
+  where
+  labelOptic = lens (\(BB x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> x) $
+    \(BB _ ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon) red' ->
+      BB red' ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon
+
+-- | @since 3.0.0
 instance
   (k ~ A_Lens, a ~ Acc UTXO, b ~ Acc UTXO) =>
   LabelOptic "inputs" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB x _ _ _ _ _ _ _ _ _ _ _) -> x) $
-    \(BB _ rins outs sigs dats ms f tr txi reds wdrls dcerts) ins' ->
-      BB ins' rins outs sigs dats ms f tr txi reds wdrls dcerts
+  labelOptic = lens (\(BB _ x _ _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> x) $
+    \(BB red _ rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon) ins' ->
+      BB red ins' rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since 2.5.0
+-- | @since 3.0.0
 instance
   (k ~ A_Lens, a ~ Acc UTXO, b ~ Acc UTXO) =>
   LabelOptic "referenceInputs" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ x _ _ _ _ _ _ _ _ _ _) -> x) $
-    \(BB ins _ outs sigs dats ms f tr txi reds wdrls dcerts) rins' ->
-      BB ins rins' outs sigs dats ms f tr txi reds wdrls dcerts
+  labelOptic = lens (\(BB _ _ x _ _ _ _ _ _ _ _ _ _ _ _ _ _) -> x) $
+    \(BB red ins _ outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon) rins' ->
+      BB red ins rins' outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since 2.5.0
+-- | @since 3.0.0
 instance
   (k ~ A_Lens, a ~ Acc UTXO, b ~ Acc UTXO) =>
   LabelOptic "outputs" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ x _ _ _ _ _ _ _ _ _) -> x) $
-    \(BB ins rins _ sigs dats ms f tr txi reds wdrls dcerts) outs' ->
-      BB ins rins outs' sigs dats ms f tr txi reds wdrls dcerts
+  labelOptic = lens (\(BB _ _ _ x _ _ _ _ _ _ _ _ _ _ _ _ _) -> x) $
+    \(BB red ins rins _ sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon) outs' ->
+      BB red ins rins outs' sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since 2.5.0
+-- | @since 3.0.0
 instance
   (k ~ A_Lens, a ~ Acc PubKeyHash, b ~ Acc PubKeyHash) =>
   LabelOptic "signatures" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ x _ _ _ _ _ _ _ _) -> x) $
-    \(BB ins rins outs _ dats ms f tr txi reds wdrls dcerts) sigs' ->
-      BB ins rins outs sigs' dats ms f tr txi reds wdrls dcerts
+  labelOptic = lens (\(BB _ _ _ _ x _ _ _ _ _ _ _ _ _ _ _ _) -> x) $
+    \(BB red ins rins outs _ dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon) sigs' ->
+      BB red ins rins outs sigs' dats ms f tr txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since 2.5.0
+-- | @since 3.0.0
 instance
   (k ~ A_Lens, a ~ Acc Data, b ~ Acc Data) =>
   LabelOptic "datums" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ x _ _ _ _ _ _ _) -> x) $
-    \(BB ins rins outs sigs _ ms f tr txi reds wdrls dcerts) dats' ->
-      BB ins rins outs sigs dats' ms f tr txi reds wdrls dcerts
+  labelOptic = lens (\(BB _ _ _ _ _ x _ _ _ _ _ _ _ _ _ _ _) -> x) $
+    \(BB red ins rins outs sigs _ ms f tr txi reds wdrls txcerts votes pprocs curtr trdon) dats' ->
+      BB red ins rins outs sigs dats' ms f tr txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since 2.5.0
+-- | @since 3.0.0
 instance
   (k ~ A_Lens, a ~ Acc Mint, b ~ Acc Mint) =>
   LabelOptic "mints" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ x _ _ _ _ _ _) -> x) $
-    \(BB ins rins outs sigs dats _ f tr txi reds wdrls dcerts) ms' ->
-      BB ins rins outs sigs dats ms' f tr txi reds wdrls dcerts
+  labelOptic = lens (\(BB _ _ _ _ _ _ x _ _ _ _ _ _ _ _ _ _) -> x) $
+    \(BB red ins rins outs sigs dats _ f tr txi reds wdrls txcerts votes pprocs curtr trdon) ms' ->
+      BB red ins rins outs sigs dats ms' f tr txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since 2.5.0
+-- | @since 3.0.0
 instance
   (k ~ A_Lens, a ~ Lovelace, b ~ Lovelace) =>
   LabelOptic "fee" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ _ x _ _ _ _ _) -> x) $
-    \(BB ins rins outs sigs dats ms _ tr txi reds wdrls dcerts) f' ->
-      BB ins rins outs sigs dats ms f' tr txi reds wdrls dcerts
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ x _ _ _ _ _ _ _ _ _) -> coerce x) $
+    \(BB red ins rins outs sigs dats ms _ tr txi reds wdrls txcerts votes pprocs curtr trdon) f' ->
+      BB red ins rins outs sigs dats ms (coerce f') tr txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since 2.5.0
+-- | @since 3.0.0
 instance
   (k ~ A_Lens, a ~ Interval POSIXTime, b ~ Interval POSIXTime) =>
   LabelOptic "timeRange" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ _ _ x _ _ _ _) -> x) $
-    \(BB ins rins outs sigs dats ms f _ txi reds wdrls dcerts) tr' ->
-      BB ins rins outs sigs dats ms f tr' txi reds wdrls dcerts
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ x _ _ _ _ _ _ _ _) -> x) $
+    \(BB red ins rins outs sigs dats ms f _ txi reds wdrls txcerts votes pprocs curtr trdon) tr' ->
+      BB red ins rins outs sigs dats ms f tr' txi reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since 2.5.0
+-- | @since 3.0.0
 instance
   (k ~ A_Lens, a ~ TxId, b ~ TxId) =>
   LabelOptic "txId" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ x _ _ _) -> x) $
-    \(BB ins rins outs sigs dats ms f tr _ reds wdrls dcerts) txi' ->
-      BB ins rins outs sigs dats ms f tr txi' reds wdrls dcerts
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ x _ _ _ _ _ _ _) -> x) $
+    \(BB red ins rins outs sigs dats ms f tr _ reds wdrls txcerts votes pprocs curtr trdon) txi' ->
+      BB red ins rins outs sigs dats ms f tr txi' reds wdrls txcerts votes pprocs curtr trdon
 
--- | @since 2.7.0
+-- | @since 3.0.0
 instance
   ( k ~ A_Lens
   , a ~ Acc (ScriptPurpose, Redeemer)
@@ -617,11 +639,11 @@ instance
   ) =>
   LabelOptic "redeemers" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ x _ _) -> x) $
-    \(BB ins rins outs sigs dats ms f tr txi _ wdrls dcerts) reds' ->
-      BB ins rins outs sigs dats ms f tr txi reds' wdrls dcerts
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ _ x _ _ _ _ _ _) -> x) $
+    \(BB red ins rins outs sigs dats ms f tr txi _ wdrls txcerts votes pprocs curtr trdon) reds' ->
+      BB red ins rins outs sigs dats ms f tr txi reds' wdrls txcerts votes pprocs curtr trdon
 
--- | @since 2.5.0
+-- | @since 3.0.0
 instance
   ( k ~ A_Lens
   , a ~ Acc (Credential, Lovelace)
@@ -629,36 +651,77 @@ instance
   ) =>
   LabelOptic "withdrawals" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ _ x _) -> x) $
-    \(BB ins rins outs sigs dats ms f tr txi reds _ dcerts) wdrls' ->
-      BB ins rins outs sigs dats ms f tr txi reds wdrls' dcerts
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ _ _ x _ _ _ _ _) -> x) $
+    \(BB red ins rins outs sigs dats ms f tr txi reds _ txcerts votes pprocs curtr trdon) wdrls' ->
+      BB red ins rins outs sigs dats ms f tr txi reds wdrls' txcerts votes pprocs curtr trdon
 
--- | @since 2.11.0
+-- | @since 3.0.0
 instance
   (k ~ A_Lens, a ~ Acc TxCert, b ~ Acc TxCert) =>
   LabelOptic "txCerts" k BaseBuilder BaseBuilder a b
   where
-  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ _ _ x) -> x) $
-    \(BB ins rins outs sigs dats ms f tr txi reds wdrls _) dcerts' ->
-      BB ins rins outs sigs dats ms f tr txi reds wdrls dcerts'
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ _ _ _ x _ _ _ _) -> x) $
+    \(BB red ins rins outs sigs dats ms f tr txi reds wdrls _ votes pprocs curtr trdon) txcerts' ->
+      BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts' votes pprocs curtr trdon
 
--- | @since 1.1.0
+-- | @since 3.0.0
+instance
+  (k ~ A_Lens, a ~ Acc (Voter, GovernanceActionId, Vote), b ~ Acc (Voter, GovernanceActionId, Vote)) =>
+  LabelOptic "votes" k BaseBuilder BaseBuilder a b
+  where
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ _ _ _ _ x _ _ _) -> x) $
+    \(BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts _ pprocs curtr trdon) votes' ->
+      BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes' pprocs curtr trdon
+
+-- | @since 3.0.0
+instance
+  (k ~ A_Lens, a ~ Acc ProposalProcedure, b ~ Acc ProposalProcedure) =>
+  LabelOptic "proposalProcedures" k BaseBuilder BaseBuilder a b
+  where
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ _ _ _ _ _ x _ _) -> x) $
+    \(BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes _ curtr trdon) pprocs' ->
+      BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs' curtr trdon
+
+-- | @since 3.0.0
+instance
+  (k ~ A_Lens, a ~ Maybe Lovelace, b ~ Maybe Lovelace) =>
+  LabelOptic "currentTreasuryAmount" k BaseBuilder BaseBuilder a b
+  where
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ x _) -> coerce x) $
+    \(BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs _ trdon) curtr' ->
+      BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs (coerce curtr') trdon
+
+-- | @since 3.0.0
+instance
+  (k ~ A_Lens, a ~ Maybe Lovelace, b ~ Maybe Lovelace) =>
+  LabelOptic "treasuryDonation" k BaseBuilder BaseBuilder a b
+  where
+  labelOptic = lens (\(BB _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ x) -> coerce x) $
+    \(BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr _) trdon' ->
+      BB red ins rins outs sigs dats ms f tr txi reds wdrls txcerts votes pprocs curtr (coerce trdon')
+
+-- | @since 3.0.0
 instance Semigroup BaseBuilder where
-  BB ins refIns outs sigs dats ms fval range tid rs wdrls dcerts
-    <> BB ins' refIns' outs' sigs' dats' ms' fval' range' tid' rs' wdrls' dcerts' =
+  BB red ins refIns outs sigs dats ms fval range tid rs wdrls txcerts votes pprocs curtr trdon
+    <> BB red' ins' refIns' outs' sigs' dats' ms' fval' range' tid' rs' wdrls' txcerts' votes' pprocs' curtr' trdon' =
       BB
+        (red <> red')
         (ins <> ins')
         (refIns <> refIns')
         (outs <> outs')
         (sigs <> sigs')
         (dats <> dats')
         (ms <> ms')
-        (fval + fval')
+        (fval <> fval')
         (choose #timeRange range range')
         (choose #txId tid tid')
         (rs <> rs')
         (wdrls <> wdrls')
-        (dcerts <> dcerts')
+        (txcerts <> txcerts')
+        (votes <> votes')
+        (pprocs <> pprocs')
+        (curtr <> curtr')
+        (trdon <> trdon')
       where
         choose ::
           forall (a :: Type).
@@ -671,7 +734,7 @@ instance Semigroup BaseBuilder where
           | view ell mempty == y = x
           | otherwise = y
 
--- | @since 1.1.0
+-- | @since 3.0.0
 instance Monoid BaseBuilder where
   mempty =
     BB
@@ -681,14 +744,19 @@ instance Monoid BaseBuilder where
       mempty
       mempty
       mempty
-      0
+      mempty
+      mempty
       always
       (TxId "")
       mempty
       mempty
       mempty
+      mempty
+      mempty
+      mempty
+      mempty
 
--- | @since 2.1.0
+-- | @since 3.0.0
 instance Builder BaseBuilder where
   _bb = lens id $ const id
   pack = id
@@ -703,7 +771,7 @@ datafy = toData
 
 {- | Adds signer to builder.
 
- @since 2.0.0
+@since 3.0.0
 -}
 signedWith ::
   forall (a :: Type).
@@ -712,7 +780,7 @@ signedWith ::
   a
 signedWith pkh = pack . set #signatures (pure pkh) $ (mempty :: BaseBuilder)
 
--- | @since 2.3.0
+-- | @since 3.0.0
 valueToMints ::
   forall (redeemer :: Type).
   (ToData redeemer) =>
@@ -725,7 +793,7 @@ valueToMints r = fmap f . AssocMap.toList . getValue
 
 {- | Mint given value.
 
- @since 2.0.0
+@since 3.0.0
 -}
 mint ::
   forall (a :: Type).
@@ -736,7 +804,7 @@ mint = mintWith ()
 
 {- | Mint tokens with given redeemer.
 
- @since 2.3.0
+@since 3.0.0
 -}
 mintWith ::
   forall (builder :: Type) (redeemer :: Type).
@@ -750,7 +818,7 @@ mintWith r val =
 
 {- Mint singleton valuw with given redeemer.
 
- @since 2.3.0
+ @since 3.0.0
 -}
 mintSingletonWith ::
   forall (builder :: Type) (redeemer :: Type).
@@ -764,7 +832,7 @@ mintSingletonWith r cs tn q = mintWith r $ Value.singleton cs tn q
 
 {- | Append extra datum to @ScriptContex@.
 
- @since 2.0.0
+@since 3.0.0
 -}
 extraData ::
   forall (builder :: Type) (datum :: Type).
@@ -787,7 +855,7 @@ extraRedeemer p r =
 
 {- | Specify a withdrawal for the script context
 
- @since 2.7.0
+@since 3.0.0
 -}
 withdrawal ::
   forall (a :: Type).
@@ -795,13 +863,13 @@ withdrawal ::
   Credential ->
   Lovelace ->
   a
-withdrawal cred withdrawalAmount =
-  pack . set #withdrawals (pure (cred, withdrawalAmount)) $
+withdrawal stakingCred withdrawalAmount =
+  pack . set #withdrawals (pure (stakingCred, withdrawalAmount)) $
     (mempty :: BaseBuilder)
 
 {- | Specify `TxId` of a script context.
 
- @since 2.0.0
+@since 3.0.0
 -}
 txId ::
   forall (a :: Type).
@@ -812,7 +880,7 @@ txId tid = pack . set #txId tid $ (mempty :: BaseBuilder)
 
 {- | Specify transaction fee of a script context.
 
- @since 2.0.0
+@since 3.0.0
 -}
 fee ::
   forall (a :: Type).
@@ -823,7 +891,7 @@ fee val = pack . set #fee val $ (mempty :: BaseBuilder)
 
 {- | Specify time range of a script context.
 
- @since 2.0.0
+@since 3.0.0
 -}
 timeRange ::
   forall (a :: Type).
@@ -834,7 +902,7 @@ timeRange r = pack . set #timeRange r $ (mempty :: BaseBuilder)
 
 {- | Specify a 'TxCert' to be included in the transaction.
 
- @since 2.11.0
+@since 3.0.0
 -}
 txCert ::
   forall (a :: Type).
@@ -845,7 +913,7 @@ txCert d = pack . set #txCerts (pure d) $ (mempty :: BaseBuilder)
 
 {- | Specify an output of a script context.
 
- @since 2.0.0
+@since 3.0.0
 -}
 output ::
   forall (a :: Type).
@@ -856,7 +924,7 @@ output x = pack . set #outputs (pure x) $ (mempty :: BaseBuilder)
 
 {- | Specify an input of a script context.
 
- @since 2.0.0
+@since 3.0.0
 -}
 input ::
   forall (a :: Type).
@@ -867,7 +935,7 @@ input x = pack . set #inputs (pure x) $ (mempty :: BaseBuilder)
 
 {- | Specify a reference input of a script context.
 
- @since 2.0.0
+@since 3.0.0
 -}
 referenceInput ::
   forall (a :: Type).
@@ -876,6 +944,44 @@ referenceInput ::
   a
 referenceInput x =
   pack . set #referenceInputs (pure x) $ (mempty :: BaseBuilder)
+
+-- | Specify a vote of a script context.
+vote ::
+  forall (a :: Type).
+  (Builder a) =>
+  Voter ->
+  GovernanceActionId ->
+  Vote ->
+  a
+vote voter action vote' =
+  pack . set #votes (pure (voter, action, vote')) $ (mempty :: BaseBuilder)
+
+-- | Specify a proposal procedure of a script context.
+proposalProcedure ::
+  forall (a :: Type).
+  (Builder a) =>
+  ProposalProcedure ->
+  a
+proposalProcedure x =
+  pack . set #proposalProcedures (pure x) $ (mempty :: BaseBuilder)
+
+-- | Specify a treasury donation of a script context.
+currentTreasuryAmount ::
+  forall (a :: Type).
+  (Builder a) =>
+  Lovelace ->
+  a
+currentTreasuryAmount x =
+  pack . set #currentTreasuryAmount (pure x) $ (mempty :: BaseBuilder)
+
+-- | Specify a treasury donation of a script context.
+treasuryDonation ::
+  forall (a :: Type).
+  (Builder a) =>
+  Lovelace ->
+  a
+treasuryDonation x =
+  pack . set #treasuryDonation (pure x) $ (mempty :: BaseBuilder)
 
 {- | As 'continuingWith', but assumes the \'continued\' 'Value' does not change.
  Useful for state tokens.
@@ -938,26 +1044,38 @@ yieldBaseTxInfo ::
   (Builder b) =>
   b ->
   TxInfo
-yieldBaseTxInfo b = case unpack b of
-  bb ->
-    TxInfo
-      { txInfoInputs = mempty
-      , txInfoReferenceInputs = mempty
-      , txInfoOutputs = mempty
-      , txInfoFee = view #fee bb
-      , txInfoMint = MintValue.emptyMintValue
-      , txInfoTxCerts = mempty
-      , txInfoWdrl = AssocMap.unsafeFromList []
-      , txInfoValidRange = view #timeRange bb
-      , txInfoSignatories = mempty
-      , txInfoRedeemers = AssocMap.unsafeFromList []
-      , txInfoData = AssocMap.unsafeFromList []
-      , txInfoId = view #txId bb
-      , txInfoVotes = AssocMap.unsafeFromList []
-      , txInfoProposalProcedures = mempty
-      , txInfoCurrentTreasuryAmount = Nothing
-      , txInfoTreasuryDonation = Nothing
-      }
+yieldBaseTxInfo (unpack -> bb) =
+  let (ins, inDat) = yieldInInfoDatums . view #inputs $ bb
+      (refin, _) = yieldInInfoDatums . view #referenceInputs $ bb
+      (outs, outDat) = yieldOutDatums . view #outputs $ bb
+      mintedValue = yieldMint . view #mints $ bb
+      extraDat = yieldExtraDatums . view #datums $ bb
+      redeemerMap = yieldRedeemerMap (view #inputs bb) (view #mints bb)
+      votes =
+        foldl
+          (AssocMap.unionWith (AssocMap.unionWith (\_ x -> x)))
+          AssocMap.empty
+          $ map (\(a, b, c) -> AssocMap.singleton a $ AssocMap.singleton b c)
+          $ toList
+          $ view #votes bb
+   in TxInfo
+        { txInfoInputs = ins
+        , txInfoReferenceInputs = refin
+        , txInfoOutputs = outs
+        , txInfoFee = view #fee bb
+        , txInfoMint = MintValue.UnsafeMintValue $ getValue mintedValue
+        , txInfoTxCerts = toList (view #txCerts bb)
+        , txInfoWdrl = AssocMap.unsafeFromList $ toList (view #withdrawals bb)
+        , txInfoValidRange = view #timeRange bb
+        , txInfoSignatories = toList . view #signatures $ bb
+        , txInfoRedeemers = AssocMap.unsafeFromList $ toList (view #redeemers bb) <> redeemerMap
+        , txInfoData = AssocMap.unsafeFromList $ inDat <> outDat <> extraDat
+        , txInfoId = view #txId bb
+        , txInfoVotes = votes
+        , txInfoProposalProcedures = mempty
+        , txInfoCurrentTreasuryAmount = Nothing
+        , txInfoTreasuryDonation = Nothing
+        }
 
 {- | Provide total mints to Continuation Monad.
 
