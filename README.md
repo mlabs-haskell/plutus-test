@@ -12,8 +12,6 @@ Libraries are adapted from [liqwid-libs](https://github.com/Liqwid-Labs/liqwid-l
 |----------------------------------------------------|---------------------------------------------------------------------------------------------|
 | [plutus-context-builder](./plutus-context-builder) | Helpful builders for `ScriptContext`s.                                                      |
 | [plutus-unit](./plutus-unit)                       | Library to write Plutus-oriented unit tests using `tasty`.                                  |
-| [plutarch-quickcheck](./plutarch-quickcheck)       | TODO                                                                                        |
-
 
 ## Organization
 
