@@ -41,52 +41,52 @@ import PlutusLedgerApi.V3 (
 {- | A context builder for Rewarding. Corresponds to
  'Plutus.V1.Ledger.Contexts.Rewarding' specifically.
 
- @since 2.8.0
+ @since WIP
 -}
 data VotingBuilder = VB BaseBuilder (Maybe Voter)
   deriving stock
-    ( -- | @since 2.8.0
+    ( -- | @since WIP
       Show
     )
 
--- | @since 2.8.0
+-- | @since WIP
 instance
   (k ~ A_Lens, a ~ BaseBuilder, b ~ BaseBuilder) =>
   LabelOptic "inner" k VotingBuilder VotingBuilder a b
   where
   labelOptic = lens (\(VB x _) -> x) $ \(VB _ v) inner' -> VB inner' v
 
--- | @since 2.8.0
+-- | @since WIP
 instance
   (k ~ A_Lens, a ~ Maybe Voter, b ~ Maybe Voter) =>
   LabelOptic "voter" k VotingBuilder VotingBuilder a b
   where
   labelOptic = lens (\(VB _ x) -> x) $ \(VB inner _) v' -> VB inner v'
 
--- | @since 2.8.0
+-- | @since WIP
 instance Semigroup VotingBuilder where
   VB inner _ <> VB inner' cs@(Just _) =
     VB (inner <> inner') cs
   VB inner cs <> VB inner' Nothing =
     VB (inner <> inner') cs
 
--- | @since 2.8.0
+-- | @since WIP
 instance Monoid VotingBuilder where
   mempty = VB mempty Nothing
 
--- | @since 2.8.0
+-- | @since WIP
 instance Builder VotingBuilder where
   _bb = #inner
   pack x = set #inner x (mempty :: VotingBuilder)
 
--- | @since 2.8.0
+-- | @since WIP
 instance Normalizer VotingBuilder where
   mkNormalized' (VB bb cs) =
     VB (mkNormalized bb) cs
 
 {- | Set Voter for building Voting ScriptContext.
 
- @since 2.8.0
+ @since WIP
 -}
 withVoter :: Voter -> VotingBuilder
 withVoter v = VB mempty $ Just v
@@ -94,7 +94,7 @@ withVoter v = VB mempty $ Just v
 {- | Builds @ScriptContext@ according to given configuration and
  @VotingBuilder@.
 
- @since 2.8.0
+ @since WIP
 -}
 buildVoting' :: VotingBuilder -> ScriptContext
 buildVoting' builder@(unpack -> bb) =

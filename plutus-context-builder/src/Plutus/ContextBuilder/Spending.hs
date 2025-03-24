@@ -5,7 +5,8 @@
 
 {- | Module: Plutus.ContextBuilder.Spending
  Copyright: (C) Liqwid Labs 2022
- Maintainer: Koz Ross <koz@mlabs.city>
+ Copyright: (C) MLabs 2025
+ Maintainer: Tomasz Maciosowski <tomasz@mlabs.city>
  Portability: GHC only
  Stability: Experimental
 
@@ -76,7 +77,7 @@ data ValidatorInputIdentifier
 {- | A context builder for spending. Corresponds broadly to validators, and to
  'PlutusLedgerApi.V1.Contexts.Spending' specifically.
 
- @since 2.5.0
+ @since WIP
 -}
 data SpendingBuilder = SB BaseBuilder (Maybe ValidatorInputIdentifier)
 
@@ -86,33 +87,33 @@ data SpendingBuilder = SB BaseBuilder (Maybe ValidatorInputIdentifier)
   }
   -}
 
--- | @since 2.5.0
+-- | @since WIP
 instance
   (k ~ A_Lens, a ~ BaseBuilder, b ~ BaseBuilder) =>
   LabelOptic "inner" k SpendingBuilder SpendingBuilder a b
   where
   labelOptic = lens (\(SB x _) -> x) $ \(SB _ vi) inner' -> SB inner' vi
 
--- | @since 2.5.0
+-- | @since WIP
 instance
   (k ~ A_Lens, a ~ Maybe ValidatorInputIdentifier, b ~ Maybe ValidatorInputIdentifier) =>
   LabelOptic "validatorInput" k SpendingBuilder SpendingBuilder a b
   where
   labelOptic = lens (\(SB _ x) -> x) $ \(SB inner _) vi' -> SB inner vi'
 
--- | @since 1.1.0
+-- | @since WIP
 instance Builder SpendingBuilder where
   _bb = #inner
   pack x = set #inner x (mempty :: SpendingBuilder)
 
--- | @since 1.0.0
+-- | @since WIP
 instance Semigroup SpendingBuilder where
   SB inner _ <> SB inner' (Just vin') =
     SB (inner <> inner') $ Just vin'
   SB inner vInRef <> SB inner' Nothing =
     SB (inner <> inner') vInRef
 
--- | @since 1.1.0
+-- | @since WIP
 instance Monoid SpendingBuilder where
   mempty = SB mempty Nothing
 
@@ -128,7 +129,7 @@ instance Normalizer SpendingBuilder where
 {- | Set Validator Input with given UTXO. Note, the given UTXO should
    exist in the inputs, otherwise the builder would fail.
 
- @since 2.0.0
+ @since WIP
 -}
 withSpendingUTXO ::
   UTXO ->
@@ -139,7 +140,7 @@ withSpendingUTXO u =
 {- | Set Validator Input with given TxOutRef. Note, input with given
    TxOutRef should exist, otherwise the builder would fail.
 
- @since 2.0.0
+ @since WIP
 -}
 withSpendingOutRef ::
   TxOutRef ->
@@ -150,7 +151,7 @@ withSpendingOutRef outref =
 {- | Set Validator Input with given TxOutRefId. Note, input with given
    TxOutRefId should exist, otherwise the builder would fail.
 
- @since 2.0.0
+ @since WIP
 -}
 withSpendingOutRefId ::
   TxId ->
@@ -161,7 +162,7 @@ withSpendingOutRefId tid =
 {- | Set Validator Input with given TxOutRefIdx. Note, input with given
    TxOutRefIdx should exist, otherwise the builder would fail.
 
- @since 2.0.0
+ @since WIP
 -}
 withSpendingOutRefIdx ::
   Integer ->
@@ -188,7 +189,7 @@ yieldValidatorInput ins = \case
 {- | Builds @ScriptContext@ according to given configuration and
  @SpendingBuilder@.
 
- @since 2.1.0
+ @since WIP
 -}
 buildSpending' :: SpendingBuilder -> ScriptContext
 buildSpending' builder@(unpack -> bb) =
@@ -206,27 +207,27 @@ buildSpending' builder@(unpack -> bb) =
 
 {- | Check builder with provided checker, then build spending context.
 
- @since 2.1.0
+ @since WIP
 -}
 buildSpending :: [Checker SpendingError SpendingBuilder] -> SpendingBuilder -> ScriptContext
 buildSpending c = buildSpending' . handleErrors (mconcat c <> checkSpending)
 
 {- | Same as `buildSpending` but instead of throwing error it returns `Either`.
 
- @since 2.1.0
+ @since WIP
 -}
 tryBuildSpending :: Checker SpendingError SpendingBuilder -> SpendingBuilder -> Either [CheckerError SpendingError] ScriptContext
 tryBuildSpending c b = case toList $ runChecker (c <> checkSpending) b of
   [] -> Right $ buildSpending' b
   errs -> Left errs
 
--- | @since 2.1.0
+-- | @since WIP
 data SpendingError
   = ValidatorInputDoesNotExists ValidatorInputIdentifier
   | ValidatorInputNotGiven
   deriving stock (Show)
 
--- | @since 2.1.0
+-- | @since WIP
 instance P.Pretty SpendingError where
   pretty (ValidatorInputDoesNotExists x) =
     "Given validator input does not exist in inputs: "
@@ -234,7 +235,7 @@ instance P.Pretty SpendingError where
       <> P.indent 4 (P.pretty (show x))
   pretty ValidatorInputNotGiven = "Validator Input is not specified"
 
--- | @since 2.1.0
+-- | @since WIP
 checkSpending :: Checker SpendingError SpendingBuilder
 checkSpending =
   checkAt AtInput $

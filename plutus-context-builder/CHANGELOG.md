@@ -2,6 +2,16 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 4.0.0 - 2025-03-24
+
+### Added
+
+* `VotingBuilder`
+
+### Modified
+
+* Migrated to V3
+
 ## 3.0.0 - 2024-02-26
 
 ### Modified

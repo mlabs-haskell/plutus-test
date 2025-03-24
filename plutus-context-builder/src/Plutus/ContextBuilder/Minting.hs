@@ -5,7 +5,8 @@
 
 {- | Module: Plutus.ContextBuilder.Minting
  Copyright: (C) Liqwid Labs 2022
- Maintainer: Koz Ross <koz@mlabs.city>
+ Copyright: (C) MLabs 2025
+ Maintainer: Tomasz Maciosowski <tomasz@mlabs.city>
  Portability: GHC only
  Stability: Experimental
 
@@ -67,40 +68,40 @@ import Prettyprinter qualified as P (Pretty (pretty))
 {- | A context builder for Minting. Corresponds to
  'Plutus.V1.Ledger.Contexts.Minting' specifically.
 
- @since 2.5.0
+ @since WIP
 -}
 data MintingBuilder = MB BaseBuilder (Maybe CurrencySymbol)
   deriving stock
-    ( -- | @since 1.0.0
+    ( -- | @since WIP
       Show
     )
 
--- | @since 2.5.0
+-- | @since WIP
 instance
   (k ~ A_Lens, a ~ BaseBuilder, b ~ BaseBuilder) =>
   LabelOptic "inner" k MintingBuilder MintingBuilder a b
   where
   labelOptic = lens (\(MB x _) -> x) $ \(MB _ cs) inner' -> MB inner' cs
 
--- | @since 2.5.0
+-- | @since WIP
 instance
   (k ~ A_Lens, a ~ Maybe CurrencySymbol, b ~ Maybe CurrencySymbol) =>
   LabelOptic "mintingCS" k MintingBuilder MintingBuilder a b
   where
   labelOptic = lens (\(MB _ x) -> x) $ \(MB inner _) cs' -> MB inner cs'
 
--- | @since 1.1.0
+-- | @since WIP
 instance Semigroup MintingBuilder where
   MB inner _ <> MB inner' cs@(Just _) =
     MB (inner <> inner') cs
   MB inner cs <> MB inner' Nothing =
     MB (inner <> inner') cs
 
--- | @since 1.1.0
+-- | @since WIP
 instance Monoid MintingBuilder where
   mempty = MB mempty Nothing
 
--- | @since 1.1.0
+-- | @since WIP
 instance Builder MintingBuilder where
   _bb = #inner
   pack x = set #inner x (mempty :: MintingBuilder)
@@ -111,7 +112,7 @@ instance Normalizer MintingBuilder where
 
 {- | Set CurrencySymbol for building Minting ScriptContext.
 
- @since 1.1.1
+ @since WIP
 -}
 withMinting :: CurrencySymbol -> MintingBuilder
 withMinting cs = MB mempty $ Just cs
@@ -119,7 +120,7 @@ withMinting cs = MB mempty $ Just cs
 {- | Builds @ScriptContext@ according to given configuration and
  @MintingBuilder@.
 
- @since 2.1.0
+ @since WIP
 -}
 buildMinting' :: MintingBuilder -> ScriptContext
 buildMinting' builder@(unpack -> bb) =
@@ -136,32 +137,32 @@ buildMinting' builder@(unpack -> bb) =
 
 {- | Check builder with provided checker, then build minting context.
 
- @since 2.1.0
+ @since WIP
 -}
 buildMinting :: [Checker MintingError MintingBuilder] -> MintingBuilder -> ScriptContext
 buildMinting c = buildMinting' . handleErrors (mconcat c <> checkMinting)
 
 {- | Same as `buildMinting` but instead of throwing error it returns `Either`.
 
- @since 2.1.0
+ @since WIP
 -}
 tryBuildMinting :: Checker MintingError MintingBuilder -> MintingBuilder -> Either [CheckerError MintingError] ScriptContext
 tryBuildMinting c b = case toList $ runChecker (c <> checkMinting) b of
   [] -> Right $ buildMinting' b
   errs -> Left errs
 
--- | @since 2.1.0
+-- | @since WIP
 data MintingError
   = MintingCurrencySymbolNotGiven
   | MintingCurrencySymbolNotFound
   deriving stock (Show)
 
--- | @since 2.1.0
+-- | @since WIP
 instance P.Pretty MintingError where
   pretty MintingCurrencySymbolNotGiven = "Minting Currency Symbol is not given"
   pretty MintingCurrencySymbolNotFound = "Specified Currency Symbol is not found on mints"
 
--- | @since 2.1.0
+-- | @since WIP
 checkMinting :: Checker MintingError MintingBuilder
 checkMinting =
   contramap
