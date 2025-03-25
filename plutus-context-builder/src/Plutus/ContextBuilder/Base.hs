@@ -35,6 +35,7 @@ module Plutus.ContextBuilder.Base (
   pubKey,
   script,
   withdrawal,
+  withCredential,
   withStakingCredential,
   withRefTxId,
   withHashDatum,
@@ -458,6 +459,14 @@ withRef (TxOutRef tid idx) = withRefTxId tid <> withRefIndex idx
 -}
 withValue :: Value -> UTXO
 withValue val = set #value val (mempty :: UTXO)
+
+{- | Specify `StakingCredential` to a UTXO.
+
+ @since 4.0.0
+-}
+withCredential :: Credential -> UTXO
+withCredential cred =
+  set #credential (pure cred) (mempty :: UTXO)
 
 {- | Specify `StakingCredential` to a UTXO.
 

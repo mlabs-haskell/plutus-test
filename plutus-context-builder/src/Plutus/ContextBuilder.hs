@@ -20,6 +20,7 @@ module Plutus.ContextBuilder (
   B.credential,
   B.pubKey,
   B.script,
+  B.withCredential,
   B.withStakingCredential,
   B.withRefTxId,
   B.withHashDatum,
