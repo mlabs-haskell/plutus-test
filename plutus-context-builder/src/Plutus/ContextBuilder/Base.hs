@@ -460,7 +460,7 @@ withRef (TxOutRef tid idx) = withRefTxId tid <> withRefIndex idx
 withValue :: Value -> UTXO
 withValue val = set #value val (mempty :: UTXO)
 
-{- | Specify `StakingCredential` to a UTXO.
+{- | Specify `Credential` to a UTXO.
 
  @since 4.0.0
 -}
