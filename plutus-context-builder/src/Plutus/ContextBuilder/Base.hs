@@ -1104,9 +1104,9 @@ yieldBaseTxInfo (unpack -> bb) =
         , txInfoData = AssocMap.unsafeFromList $ inDat <> outDat <> extraDat
         , txInfoId = view #txId bb
         , txInfoVotes = votes
-        , txInfoProposalProcedures = mempty
-        , txInfoCurrentTreasuryAmount = Nothing
-        , txInfoTreasuryDonation = Nothing
+        , txInfoProposalProcedures = toList $ view #proposalProcedures bb
+        , txInfoCurrentTreasuryAmount = view #currentTreasuryAmount bb
+        , txInfoTreasuryDonation = view #treasuryDonation bb
         }
 
 {- | Provide total mints to Continuation Monad.
