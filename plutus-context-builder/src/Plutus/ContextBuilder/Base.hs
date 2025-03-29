@@ -462,7 +462,7 @@ withValue val = set #value val (mempty :: UTXO)
 
 {- | Specify `Credential` to a UTXO.
 
- @since WIP
+ @since 4.2.0
 -}
 withCredential :: Credential -> UTXO
 withCredential cred =
