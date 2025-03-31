@@ -77,7 +77,7 @@ module Plutus.ContextBuilder (
   CE.buildCertifying',
   V.VotingBuilder,
   V.buildVoting',
-  V.withVoter,
+  V.withVoting,
   T.TxInfoBuilder (..),
   T.mints,
   T.buildTxInfo,

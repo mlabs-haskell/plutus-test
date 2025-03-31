@@ -20,7 +20,7 @@ module Plutus.ContextBuilder.Voting (
   VotingBuilder,
 
   -- * Input
-  withVoter,
+  withVoting,
 
   -- * builder
   buildVoting',
@@ -90,8 +90,8 @@ instance Normalizer VotingBuilder where
 
  @since 4.0.0
 -}
-withVoter :: Voter -> VotingBuilder
-withVoter v = VB mempty $ Just v
+withVoting :: Voter -> VotingBuilder
+withVoting v = VB mempty $ Just v
 
 {- | Builds @ScriptContext@ according to given configuration and
  @VotingBuilder@.
