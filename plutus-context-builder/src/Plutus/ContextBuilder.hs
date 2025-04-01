@@ -75,6 +75,9 @@ module Plutus.ContextBuilder (
   CE.CertifyingBuilder,
   CE.withCertifying,
   CE.buildCertifying',
+  V.VotingBuilder,
+  V.buildVoting',
+  V.withVoting,
   T.TxInfoBuilder (..),
   T.mints,
   T.buildTxInfo,
@@ -124,5 +127,6 @@ import Plutus.ContextBuilder.Rewarding qualified as R
 import Plutus.ContextBuilder.Spending qualified as S
 import Plutus.ContextBuilder.SubBuilder qualified as Sub
 import Plutus.ContextBuilder.TxInfo qualified as T
+import Plutus.ContextBuilder.Voting qualified as V
 
 import Plutus.ContextBuilder.Internal qualified as I
