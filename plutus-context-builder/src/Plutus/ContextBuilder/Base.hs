@@ -462,7 +462,7 @@ withValue val = set #value val (mempty :: UTXO)
 
 {- | Specify `Credential` to a UTXO.
 
- @since WIP
+ @since 4.2.0
 -}
 withCredential :: Credential -> UTXO
 withCredential cred =
@@ -1124,7 +1124,7 @@ yieldMint = foldMap mintToValue . toList
 -}
 mintToValue :: Mint -> Value
 mintToValue m =
-  foldMap f (view #tokens m) <> Value.singleton adaSymbol adaToken 0
+  foldMap f (view #tokens m)
   where
     f :: (TokenName, Integer) -> Value
     f = uncurry $ Value.singleton $ view #symbol m
