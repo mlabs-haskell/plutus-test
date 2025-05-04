@@ -24,6 +24,10 @@
         hci-effects.follows = "hci-effects";
       };
     };
+    cardanoPackages = {
+      url = "github:IntersectMBO/cardano-haskell-packages?ref=repo";
+      flake = false;
+    };
   };
 
   outputs = inputs: inputs.flake-parts.lib.mkFlake { inherit inputs; } ({ self, ... }: {
