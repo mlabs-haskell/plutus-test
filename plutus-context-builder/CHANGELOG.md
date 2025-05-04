@@ -2,6 +2,12 @@
 
 This format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+## 4.3.0 - 2025-05-04
+
+### Modified
+
+* Upgraded `plutus-core` version to 1.45
+
 ## 4.2.0 - 2025-03-24
 
 ### Fixed

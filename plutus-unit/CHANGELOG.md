@@ -1,5 +1,11 @@
 # Revision history for `plutarch-unit`
 
+## 2.1.0 - 2025-05-04
+
+### Modified
+
+* Upgraded `plutus-core` version to 1.45
+
 ## 2.0.0 -- 2025-03-24
 
 ### Modified

@@ -83,6 +83,23 @@
         "type": "github"
       }
     },
+    "cardanoPackages": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1745960978,
+        "narHash": "sha256-SKYYwYUYPEuHhVFu+82ExAYkaJ1oZ9MIgRZ2U+MVpe4=",
+        "owner": "IntersectMBO",
+        "repo": "cardano-haskell-packages",
+        "rev": "b8e34520941dd8631c22c7bf2f1cd68533104fe0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "IntersectMBO",
+        "ref": "repo",
+        "repo": "cardano-haskell-packages",
+        "type": "github"
+      }
+    },
     "empty-flake": {
       "locked": {
         "lastModified": 1665652377,
@@ -690,6 +707,7 @@
     },
     "root": {
       "inputs": {
+        "cardanoPackages": "cardanoPackages",
         "flake-parts": "flake-parts",
         "hci-effects": "hci-effects",
         "nixpkgs": "nixpkgs",

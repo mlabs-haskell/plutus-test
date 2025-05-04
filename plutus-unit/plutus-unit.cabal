@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-unit
-version:            2.0.0
+version:            2.1.0
 synopsis:           Unit checks for Plutarch
 description:
   An independent unitcheck library for constructing unit checks for Plutarch.
@@ -89,6 +89,6 @@ library
     , tagged
     , tasty
     , text
-    , plutus-core >=1.40.0.0 && <1.41
+    , plutus-core >=1.45 && <1.46
 
   hs-source-dirs:  src
