@@ -15,7 +15,7 @@
       devShells.plutusTest = pkgs.mkShell {
         shellHook = config.pre-commit.installationScript;
         inputsFrom = [
-          plutusTest.devShell
+          plutusTest.devShells.default
         ];
       };
       inherit (plutusTest) packages checks;
