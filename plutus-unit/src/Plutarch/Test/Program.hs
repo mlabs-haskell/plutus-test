@@ -67,21 +67,25 @@ data ScriptResult
 -}
 data ScriptCase = ScriptCase
   { name :: String
-  -- ^ The name.
-  --
-  -- @since 2.0
+  {- ^ The name.
+
+  @since 2.0
+  -}
   , expectation :: ScriptResult
-  -- ^ The expectation.
-  --
-  -- @since 2.0
+  {- ^ The expectation.
+
+  @since 2.0
+  -}
   , script :: UPLC.Program UPLC.DeBruijn UPLC.DefaultUni UPLC.DefaultFun ()
-  -- ^ The script.
-  --
-  -- @since 2.0
+  {- ^ The script.
+
+  @since 2.0
+  -}
   , debugScript :: UPLC.Program UPLC.DeBruijn UPLC.DefaultUni UPLC.DefaultFun ()
-  -- ^ Debug version of the script for .
-  --
-  -- @since 2.0
+  {- ^ Debug version of the script for .
+
+  @since 2.0
+  -}
   }
   deriving stock
     ( -- | @since 2.0
@@ -146,8 +150,9 @@ runScript ::
   UPLC.Program UPLC.DeBruijn UPLC.DefaultUni UPLC.DefaultFun () ->
   -- | Message to return upon success.
   String ->
-  -- | Returns the result of evaluating the script, along with the parameter
-  -- message upon success, or an error message upon failure.
+  {- | Returns the result of evaluating the script, along with the parameter
+  message upon success, or an error message upon failure.
+  -}
   (ScriptResult, String)
 runScript script debug onSuccess = case scriptResult of
   (Right _, _, _) -> (ScriptSuccess, onSuccess)
