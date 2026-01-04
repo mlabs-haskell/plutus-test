@@ -86,11 +86,11 @@
     "cardanoPackages": {
       "flake": false,
       "locked": {
-        "lastModified": 1766506409,
-        "narHash": "sha256-bbdaZgdzBQbXfsMqmqkEpuMETuCwFU4EJOExq3lIIFA=",
+        "lastModified": 1767347536,
+        "narHash": "sha256-9TexWy0rix2zjRY8tt6Q+A6Xj4WLuFL6KN7BMlxl6pk=",
         "owner": "IntersectMBO",
         "repo": "cardano-haskell-packages",
-        "rev": "fb6dc748b69f2feb8257c7b3f1bbf3d8a7d5377e",
+        "rev": "7da010cd68b844ce9a0e2e0db5a0713065da2f76",
         "type": "github"
       },
       "original": {
@@ -118,15 +118,15 @@
     "flake-compat": {
       "flake": false,
       "locked": {
-        "lastModified": 1761588595,
-        "narHash": "sha256-XKUZz9zewJNUj46b4AJdiRZJAvSZ0Dqj2BNfXvFlJC4=",
-        "owner": "edolstra",
+        "lastModified": 1767039857,
+        "narHash": "sha256-vNpUSpF5Nuw8xvDLj2KCwwksIbjua2LZCqhV1LNRDns=",
+        "owner": "NixOS",
         "repo": "flake-compat",
-        "rev": "f387cd2afec9419c8ee37694406ca490c3f34ee5",
+        "rev": "5edf11c44bc78a0d334f6334cdaf7d60d732daab",
         "type": "github"
       },
       "original": {
-        "owner": "edolstra",
+        "owner": "NixOS",
         "repo": "flake-compat",
         "type": "github"
       }
@@ -591,11 +591,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1766925759,
-        "narHash": "sha256-g4KkXxTwolGlImPmcpq1oWaN/DbTKUVzQSuvYktiQLY=",
+        "lastModified": 1767530592,
+        "narHash": "sha256-Hl6Se9Ha2OrNvFb4MpMVIKYtn0i6g3fidDTD0QGIAEM=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "6a677c615822f4e1d372599d8d213c35c339dc88",
+        "rev": "da67cb9a2ee6c33b85d8c572659412f78fccc52a",
         "type": "github"
       },
       "original": {
@@ -726,11 +726,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1765911976,
-        "narHash": "sha256-t3T/xm8zstHRLx+pIHxVpQTiySbKqcQbK+r+01XVKc0=",
+        "lastModified": 1767281941,
+        "narHash": "sha256-6MkqajPICgugsuZ92OMoQcgSHnD6sJHwk8AxvMcIgTE=",
         "owner": "cachix",
         "repo": "pre-commit-hooks.nix",
-        "rev": "b68b780b69702a090c8bb1b973bab13756cc7a27",
+        "rev": "f0927703b7b1c8d97511c4116eb9b4ec6645a0fa",
         "type": "github"
       },
       "original": {
